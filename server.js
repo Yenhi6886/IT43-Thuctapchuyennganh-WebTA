@@ -738,6 +738,15 @@ function getPagination(req) {
   return { page, limit, offset, limitSql };
 }
 
+function safeParseJson(val, fallback) {
+  if (val == null || val === '') return fallback;
+  if (typeof val === 'object') return val;
+  if (typeof val === 'string') {
+    try { return JSON.parse(val); } catch (_) { return fallback; }
+  }
+  return fallback;
+}
+
 app.get('/api/admin/dashboard', async (req, res) => {
   try {
     const usersResult = await query('SELECT COUNT(*) as total FROM users');
@@ -1075,7 +1084,7 @@ app.get('/api/admin/grammar', async (req, res) => {
     const countResult = await query('SELECT COUNT(*) as total FROM grammar_exercises');
     const total = countResult[0].total;
     const rows = await query('SELECT * FROM grammar_exercises ORDER BY day_number, id' + limitSql);
-    rows.forEach(r => { if (typeof r.options === 'string') r.options = JSON.parse(r.options); });
+    rows.forEach(r => { r.options = safeParseJson(r.options, []); });
     res.json({ data: rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1200,19 +1209,40 @@ app.get('/api/admin/reading', async (req, res) => {
     const { page, limit, limitSql } = getPagination(req);
     const countResult = await query('SELECT COUNT(*) as total FROM reading_passages');
     const total = countResult[0].total;
-    const rows = await query('SELECT * FROM reading_passages ORDER BY day_number' + limitSql);
-    rows.forEach(r => { if (typeof r.questions === 'string') r.questions = JSON.parse(r.questions); });
+    const rows = await query('SELECT * FROM reading_passages ORDER BY day_number, id' + limitSql);
+    rows.forEach(r => { r.questions = safeParseJson(r.questions, []); });
     res.json({ data: rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/admin/reading/:id', async (req, res) => {
+  try {
+    const rows = await query('SELECT * FROM reading_passages WHERE id = ?', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    rows[0].questions = safeParseJson(rows[0].questions, []);
+    res.json(rows[0]);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/admin/reading', async (req, res) => {
   try {
     const { title, content, category, questions, day_number } = req.body;
-    const qs = typeof questions === 'string' ? questions : JSON.stringify(questions);
+    if (!title || !content) return res.status(400).json({ error: 'Title and content required' });
+    const qs = typeof questions === 'string' ? questions : JSON.stringify(questions || []);
     const result = await query('INSERT INTO reading_passages (title, content, category, questions, day_number) VALUES (?,?,?,?,?)',
       [title, content, category || '', qs, day_number || 1]);
     res.json({ success: true, id: result.insertId });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/admin/reading/:id', async (req, res) => {
+  try {
+    const { title, content, category, questions, day_number } = req.body;
+    if (!title || !content) return res.status(400).json({ error: 'Title and content required' });
+    const qs = typeof questions === 'string' ? questions : JSON.stringify(questions || []);
+    await query('UPDATE reading_passages SET title=?, content=?, category=?, questions=?, day_number=? WHERE id=?',
+      [title, content, category || '', qs, day_number || 1, req.params.id]);
+    res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1229,19 +1259,40 @@ app.get('/api/admin/listening', async (req, res) => {
     const { page, limit, limitSql } = getPagination(req);
     const countResult = await query('SELECT COUNT(*) as total FROM listening_dialogues');
     const total = countResult[0].total;
-    const rows = await query('SELECT * FROM listening_dialogues ORDER BY day_number' + limitSql);
-    rows.forEach(r => { if (typeof r.questions === 'string') r.questions = JSON.parse(r.questions); });
+    const rows = await query('SELECT * FROM listening_dialogues ORDER BY day_number, id' + limitSql);
+    rows.forEach(r => { r.questions = safeParseJson(r.questions, []); });
     res.json({ data: rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/admin/listening/:id', async (req, res) => {
+  try {
+    const rows = await query('SELECT * FROM listening_dialogues WHERE id = ?', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    rows[0].questions = safeParseJson(rows[0].questions, []);
+    res.json(rows[0]);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/admin/listening', async (req, res) => {
   try {
     const { title, dialogue, category, questions, day_number } = req.body;
-    const qs = typeof questions === 'string' ? questions : JSON.stringify(questions);
+    if (!title || !dialogue) return res.status(400).json({ error: 'Title and dialogue required' });
+    const qs = typeof questions === 'string' ? questions : JSON.stringify(questions || []);
     const result = await query('INSERT INTO listening_dialogues (title, dialogue, category, questions, day_number) VALUES (?,?,?,?,?)',
       [title, dialogue, category || '', qs, day_number || 1]);
     res.json({ success: true, id: result.insertId });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/admin/listening/:id', async (req, res) => {
+  try {
+    const { title, dialogue, category, questions, day_number } = req.body;
+    if (!title || !dialogue) return res.status(400).json({ error: 'Title and dialogue required' });
+    const qs = typeof questions === 'string' ? questions : JSON.stringify(questions || []);
+    await query('UPDATE listening_dialogues SET title=?, dialogue=?, category=?, questions=?, day_number=? WHERE id=?',
+      [title, dialogue, category || '', qs, day_number || 1, req.params.id]);
+    res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1258,17 +1309,36 @@ app.get('/api/admin/speaking', async (req, res) => {
     const { page, limit, limitSql } = getPagination(req);
     const countResult = await query('SELECT COUNT(*) as total FROM speaking_prompts');
     const total = countResult[0].total;
-    const rows = await query('SELECT * FROM speaking_prompts ORDER BY day_number' + limitSql);
+    const rows = await query('SELECT * FROM speaking_prompts ORDER BY day_number, id' + limitSql);
     res.json({ data: rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/admin/speaking/:id', async (req, res) => {
+  try {
+    const rows = await query('SELECT * FROM speaking_prompts WHERE id = ?', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    res.json(rows[0]);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/admin/speaking', async (req, res) => {
   try {
     const { prompt, sample_answer, key_phrases, category, day_number } = req.body;
+    if (!prompt) return res.status(400).json({ error: 'Prompt required' });
     const result = await query('INSERT INTO speaking_prompts (prompt, sample_answer, key_phrases, category, day_number) VALUES (?,?,?,?,?)',
       [prompt, sample_answer || '', key_phrases || '', category || '', day_number || 1]);
     res.json({ success: true, id: result.insertId });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/admin/speaking/:id', async (req, res) => {
+  try {
+    const { prompt, sample_answer, key_phrases, category, day_number } = req.body;
+    if (!prompt) return res.status(400).json({ error: 'Prompt required' });
+    await query('UPDATE speaking_prompts SET prompt=?, sample_answer=?, key_phrases=?, category=?, day_number=? WHERE id=?',
+      [prompt, sample_answer || '', key_phrases || '', category || '', day_number || 1, req.params.id]);
+    res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1285,17 +1355,36 @@ app.get('/api/admin/writing', async (req, res) => {
     const { page, limit, limitSql } = getPagination(req);
     const countResult = await query('SELECT COUNT(*) as total FROM writing_tasks');
     const total = countResult[0].total;
-    const rows = await query('SELECT * FROM writing_tasks ORDER BY day_number' + limitSql);
+    const rows = await query('SELECT * FROM writing_tasks ORDER BY day_number, id' + limitSql);
     res.json({ data: rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/admin/writing/:id', async (req, res) => {
+  try {
+    const rows = await query('SELECT * FROM writing_tasks WHERE id = ?', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    res.json(rows[0]);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.post('/api/admin/writing', async (req, res) => {
   try {
     const { title, prompt, sample_answer, category, word_limit, day_number } = req.body;
+    if (!title || !prompt) return res.status(400).json({ error: 'Title and prompt required' });
     const result = await query('INSERT INTO writing_tasks (title, prompt, sample_answer, category, word_limit, day_number) VALUES (?,?,?,?,?,?)',
       [title, prompt, sample_answer || '', category || '', word_limit || 150, day_number || 1]);
     res.json({ success: true, id: result.insertId });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/admin/writing/:id', async (req, res) => {
+  try {
+    const { title, prompt, sample_answer, category, word_limit, day_number } = req.body;
+    if (!title || !prompt) return res.status(400).json({ error: 'Title and prompt required' });
+    await query('UPDATE writing_tasks SET title=?, prompt=?, sample_answer=?, category=?, word_limit=?, day_number=? WHERE id=?',
+      [title, prompt, sample_answer || '', category || '', word_limit || 150, day_number || 1, req.params.id]);
+    res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
