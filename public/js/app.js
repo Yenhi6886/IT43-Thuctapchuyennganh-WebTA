@@ -124,6 +124,7 @@ async function login() {
     currentUser = await API.login(u, p);
     localStorage.setItem('user', JSON.stringify(currentUser));
     if (currentUser.language) i18n.setLang(currentUser.language);
+    if (redirectAdminToPanel()) return;
     enterApp();
   } catch (e) {
     if (e.message.toLowerCase().includes('password') || e.message.toLowerCase().includes('user') || e.message.toLowerCase().includes('invalid')) {
@@ -170,6 +171,7 @@ async function loginWithGoogle() {
           currentUser = result;
           localStorage.setItem('user', JSON.stringify(currentUser));
           if (currentUser.language) i18n.setLang(currentUser.language);
+          if (redirectAdminToPanel()) return;
           if (result.isNewUser) {
             showOnboardingPopup();
           } else {
@@ -199,6 +201,7 @@ async function handleFacebookLogin(accessToken) {
     currentUser = result;
     localStorage.setItem('user', JSON.stringify(currentUser));
     if (currentUser.language) i18n.setLang(currentUser.language);
+    if (redirectAdminToPanel()) return;
     if (result.isNewUser) {
       showOnboardingPopup();
     } else {
@@ -282,7 +285,17 @@ function logout() {
   showLanding();
 }
 
+/** Admin chỉ quản lý — không vào app học */
+function redirectAdminToPanel() {
+  if (currentUser && currentUser.role === 'role_admin') {
+    window.location.href = '/admin.html';
+    return true;
+  }
+  return false;
+}
+
 function enterApp() {
+  if (redirectAdminToPanel()) return;
   $('landingPage').classList.add('hidden');
   $('authScreen').classList.add('hidden');
   $('appLayout').classList.remove('hidden');

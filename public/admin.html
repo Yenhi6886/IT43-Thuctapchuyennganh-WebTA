@@ -310,12 +310,14 @@
   function loadUsers() {
     const tbody = document.getElementById('users-tbody');
     tbody.innerHTML = '<tr><td colspan="6" class="text-center">Đang tải...</td></tr>';
-    fetch('/api/admin/users').then(r=>r.json()).then(users => {
+    fetch('/api/admin/users').then(r=>r.json()).then(res => {
+      const users = Array.isArray(res) ? res : (res.data || []);
       tbody.innerHTML = '';
       if (!users.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center">Chưa có user.</td></tr>'; return; }
       users.forEach(u => {
-        const rn = u.role==='role_admin'?'Admin':u.role==='role_teacher'?'Teacher':'Student';
-        const rc = rn==='Admin'?'#f59e0b':rn==='Teacher'?'#4f46e5':'#10b981';
+        const isAdmin = u.role === 'role_admin';
+        const rn = isAdmin ? 'Admin' : 'Người dùng';
+        const rc = isAdmin ? '#f59e0b' : '#10b981';
         tbody.innerHTML += `<tr>
           <td><strong>${u.display_name||u.username}</strong></td>
           <td class="text-muted">@${u.username}</td>
@@ -324,9 +326,8 @@
           <td>🔥 ${u.streak_days||0}</td>
           <td>
             <select onchange="updateRole('${u.id}',this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid #e5e7eb;font-size:0.8rem">
-              <option value="user" ${u.role!=='role_admin'&&u.role!=='role_teacher'?'selected':''}>Student</option>
-              <option value="role_teacher" ${u.role==='role_teacher'?'selected':''}>Teacher</option>
-              <option value="role_admin" ${u.role==='role_admin'?'selected':''}>Admin</option>
+              <option value="user" ${!isAdmin?'selected':''}>Người dùng</option>
+              <option value="role_admin" ${isAdmin?'selected':''}>Admin</option>
             </select>
             <button class="btn btn-icon danger" onclick="deleteUser('${u.id}')"><i class="fa-solid fa-trash"></i></button>
           </td></tr>`;
@@ -582,14 +583,13 @@
 
   // ==================== ROLES ====================
   function loadRoles() {
-    fetch('/api/admin/users').then(r=>r.json()).then(users => {
-      const admins = users.filter(u=>u.role==='role_admin');
-      const teachers = users.filter(u=>u.role==='role_teacher');
-      const students = users.filter(u=>u.role!=='role_admin'&&u.role!=='role_teacher');
+    fetch('/api/admin/users').then(r=>r.json()).then(res => {
+      const users = Array.isArray(res) ? res : (res.data || []);
+      const admins = users.filter(u => u.role === 'role_admin');
+      const students = users.filter(u => u.role !== 'role_admin');
       document.getElementById('roles-grid').innerHTML = `
-        <div class="role-card admin"><i class="fa-solid fa-crown role-icon"></i><h3>Administrator</h3><p>Full quyền quản trị toàn bộ hệ thống.</p><span>${admins.length} Users</span></div>
-        <div class="role-card teacher"><i class="fa-solid fa-chalkboard-user role-icon"></i><h3>Teacher</h3><p>Tạo bài tập, chấm điểm, upload đề.</p><span>${teachers.length} Users</span></div>
-        <div class="role-card student"><i class="fa-solid fa-user-graduate role-icon"></i><h3>Student</h3><p>Học tập, tracking tiến độ.</p><span>${students.length} Users</span></div>`;
+        <div class="role-card admin"><i class="fa-solid fa-crown role-icon"></i><h3>Admin</h3><p>Chỉ quản lý hệ thống: nội dung, người dùng, chủ đề. Không học trên app.</p><span>${admins.length} Users</span></div>
+        <div class="role-card student"><i class="fa-solid fa-user-graduate role-icon"></i><h3>Người dùng</h3><p>Học tập, theo dõi tiến độ trên trang chính.</p><span>${students.length} Users</span></div>`;
     });
   }
 

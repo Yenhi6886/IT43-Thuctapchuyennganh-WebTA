@@ -288,7 +288,6 @@ h1, h2, h3, h4 { color: var(--text-dark); }
 .role-card { background: white; border-radius: var(--radius); padding: 2rem; text-align: center; border: 1px solid var(--border-color); position: relative; }
 .role-icon { font-size: 3rem; margin-bottom: 1rem; }
 .role-card.admin .role-icon { color: var(--warning-color); }
-.role-card.teacher .role-icon { color: var(--primary-color); }
 .role-card.student .role-icon { color: var(--secondary-color); }
 .role-card h3 { font-size: 1.3rem; margin-bottom: 0.5rem; }
 .role-card p { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.5; }

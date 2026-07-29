@@ -920,6 +920,9 @@ app.get('/api/admin/users', async (req, res) => {
 app.put('/api/admin/users/:id/role', async (req, res) => {
   try {
     const { role } = req.body;
+    if (role !== 'role_admin' && role !== 'user') {
+      return res.status(400).json({ error: 'Role không hợp lệ. Chỉ chấp nhận role_admin hoặc user.' });
+    }
     await query('UPDATE users SET role = ? WHERE id = ?', [role, req.params.id]);
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1518,6 +1521,12 @@ async function start() {
       await query('ALTER TABLE users ADD COLUMN email VARCHAR(255) DEFAULT NULL');
       console.log('✅ Added email column');
     } catch (e) { /* column already exists */ }
+
+    // Migrate legacy roles: teacher → user; normalize empty/null → user
+    try {
+      const r = await query("UPDATE users SET role = 'user' WHERE role = 'role_teacher' OR role IS NULL OR role = ''");
+      if (r.affectedRows > 0) console.log(`✅ Migrated ${r.affectedRows} user(s) to role=user`);
+    } catch (e) { console.warn('Role migrate skip:', e.message); }
 
   } catch (e) {
     console.error('❌ Failed to connect to MySQL:', e.message);
