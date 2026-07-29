@@ -177,8 +177,8 @@
           <div class="page-header flex-between"><div><h1>Quản Lý Từ Vựng</h1><p>Thêm/sửa/xóa từ vựng. User sẽ thấy ngay khi refresh.</p></div>
             <button class="btn btn-primary" onclick="showAddVocabModal()"><i class="fa-solid fa-plus"></i> Thêm Từ Mới</button></div>
           <div class="filter-bar">
-            <select id="vocab-cat-filter" onchange="loadVocabulary()"><option value="">Tất cả danh mục</option></select>
-            <input type="text" id="vocab-search" placeholder="Tìm từ vựng..." oninput="loadVocabulary()">
+            <select id="vocab-cat-filter" onchange="_vocabPage=1;loadVocabulary(1)"><option value="">Tất cả danh mục</option></select>
+            <input type="text" id="vocab-search" placeholder="Tìm từ vựng..." oninput="_vocabPage=1;loadVocabulary(1)">
           </div>
           <div class="table-container"><table class="data-table"><thead><tr><th>Từ vựng</th><th>Loại</th><th>Nghĩa (VN)</th><th>Category</th><th>Day</th><th>Hành động</th></tr></thead>
           <tbody id="vocab-tbody"><tr><td colspan="6" class="text-center">Đang tải...</td></tr></tbody></table></div>
@@ -251,6 +251,23 @@
   <script>
   // ==================== AUTH ====================
   let _adminUser = null;
+  let _vocabPage = 1;
+  const VOCAB_PAGE_SIZE = 50;
+  const LIST_LIMIT = 5000;
+
+  function asList(res) {
+    if (Array.isArray(res)) return res;
+    if (res && Array.isArray(res.data)) return res.data;
+    return [];
+  }
+  function asTotal(res, list) {
+    return res?.pagination?.total ?? list.length;
+  }
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function setText(id,val) { const el=document.getElementById(id); if(el) el.textContent = typeof val==='number'?val.toLocaleString():(val||'0'); }
+  function gv(id) { return document.getElementById(id)?.value||''; }
 
   function checkAuth() {
     const saved = localStorage.getItem('user');
@@ -444,16 +461,12 @@
     }).catch(e => console.error(e));
   }
 
-  function esc(s) {
-    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
   // ==================== USERS ====================
   function loadUsers() {
     const tbody = document.getElementById('users-tbody');
     tbody.innerHTML = '<tr><td colspan="6" class="text-center">Đang tải...</td></tr>';
-    fetch('/api/admin/users').then(r=>r.json()).then(res => {
-      const users = Array.isArray(res) ? res : (res.data || []);
+    fetch(`/api/admin/users?limit=${LIST_LIMIT}`).then(r=>r.json()).then(res => {
+      const users = asList(res);
       tbody.innerHTML = '';
       if (!users.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center">Chưa có user.</td></tr>'; return; }
       users.forEach(u => {
@@ -461,10 +474,10 @@
         const rn = isAdmin ? 'Admin' : 'Người dùng';
         const rc = isAdmin ? '#f59e0b' : '#10b981';
         tbody.innerHTML += `<tr>
-          <td><strong>${u.display_name||u.username}</strong></td>
-          <td class="text-muted">@${u.username}</td>
+          <td><strong>${esc(u.display_name||u.username)}</strong></td>
+          <td class="text-muted">@${esc(u.username)}</td>
           <td style="color:${rc};font-weight:700">${rn}</td>
-          <td>${u.english_level||'N/A'}</td>
+          <td>${esc(u.english_level||'N/A')}</td>
           <td>🔥 ${u.streak_days||0}</td>
           <td>
             <select onchange="updateRole('${u.id}',this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid #e5e7eb;font-size:0.8rem">
@@ -474,7 +487,7 @@
             <button class="btn btn-icon danger" onclick="deleteUser('${u.id}')"><i class="fa-solid fa-trash"></i></button>
           </td></tr>`;
       });
-    });
+    }).catch(e => { tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color:red">Lỗi: ${esc(e.message)}</td></tr>`; });
   }
 
   function updateRole(id, role) {
@@ -486,38 +499,58 @@
   }
 
   // ==================== VOCABULARY CRUD ====================
-  function loadVocabulary() {
+  function loadVocabulary(page) {
+    if (page) _vocabPage = page;
     fetch('/api/admin/vocabulary/categories').then(r=>r.json()).then(cats => {
+      const list = asList(cats);
       const sel = document.getElementById('vocab-cat-filter');
       const cv = sel.value;
       sel.innerHTML = '<option value="">Tất cả danh mục</option>';
-      cats.forEach(c => sel.innerHTML += `<option value="${c.category}" ${c.category===cv?'selected':''}>${c.category} (${c.count})</option>`);
-    });
+      list.forEach(c => sel.innerHTML += `<option value="${esc(c.category)}" ${c.category===cv?'selected':''}>${esc(c.category)} (${c.count})</option>`);
+    }).catch(()=>{});
 
     const cat = document.getElementById('vocab-cat-filter').value;
     const search = document.getElementById('vocab-search').value;
-    let url = '/api/admin/vocabulary?';
+    let url = `/api/admin/vocabulary?page=${_vocabPage}&limit=${VOCAB_PAGE_SIZE}&`;
     if(cat) url += `category=${encodeURIComponent(cat)}&`;
     if(search) url += `search=${encodeURIComponent(search)}&`;
 
     const tbody = document.getElementById('vocab-tbody');
     tbody.innerHTML = '<tr><td colspan="6" class="text-center">Đang tải...</td></tr>';
-    fetch(url).then(r=>r.json()).then(data => {
+    fetch(url).then(r=>r.json()).then(res => {
+      const data = asList(res);
+      const total = asTotal(res, data);
+      const totalPages = Math.max(1, Math.ceil(total / VOCAB_PAGE_SIZE));
       tbody.innerHTML = '';
-      if(!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center">Không có kết quả.</td></tr>'; return; }
-      data.forEach(w => {
+      if(!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center">Không có kết quả.</td></tr>'; }
+      else data.forEach(w => {
+        const safe = JSON.stringify(w).replace(/'/g,"&#39;").replace(/</g,'&lt;');
         tbody.innerHTML += `<tr>
-          <td><strong>${w.term}</strong></td>
-          <td>${w.word_type||'n.'}</td>
-          <td title="${w.definition_en||''}" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${w.definition_vi||''}</td>
-          <td><span style="background:#e0e7ff;color:#4f46e5;padding:3px 8px;border-radius:10px;font-size:0.75rem">${w.category}</span></td>
+          <td><strong>${esc(w.term)}</strong></td>
+          <td>${esc(w.word_type||'n.')}</td>
+          <td title="${esc(w.definition_en||'')}" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(w.definition_vi||'')}</td>
+          <td><span style="background:#e0e7ff;color:#4f46e5;padding:3px 8px;border-radius:10px;font-size:0.75rem">${esc(w.category)}</span></td>
           <td>Day ${w.day_number}</td>
           <td style="min-width:90px">
-            <button class="btn btn-icon" onclick='editVocab(${JSON.stringify(w).replace(/'/g,"&#39;")})'><i class="fa-solid fa-pen"></i></button>
+            <button class="btn btn-icon" onclick='editVocab(${safe})'><i class="fa-solid fa-pen"></i></button>
             <button class="btn btn-icon danger" onclick="deleteVocab(${w.id})"><i class="fa-solid fa-trash"></i></button>
           </td></tr>`;
       });
-    });
+      // pagination bar
+      let pager = document.getElementById('vocab-pager');
+      if (!pager) {
+        pager = document.createElement('div');
+        pager.id = 'vocab-pager';
+        pager.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-top:1rem;gap:1rem;flex-wrap:wrap';
+        tbody.closest('.table-container')?.parentElement?.appendChild(pager);
+      }
+      pager.innerHTML = `<span class="text-muted">Hiển thị ${data.length ? ((_vocabPage-1)*VOCAB_PAGE_SIZE+1) : 0}–${Math.min(_vocabPage*VOCAB_PAGE_SIZE, total)} / ${total.toLocaleString()} từ</span>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <button class="btn btn-outline" ${_vocabPage<=1?'disabled':''} onclick="loadVocabulary(${_vocabPage-1})">← Trước</button>
+          <span>Trang ${_vocabPage}/${totalPages}</span>
+          <button class="btn btn-outline" ${_vocabPage>=totalPages?'disabled':''} onclick="loadVocabulary(${_vocabPage+1})">Sau →</button>
+        </div>`;
+    }).catch(e => { tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color:red">Lỗi: ${esc(e.message)}</td></tr>`; });
   }
 
   function showAddVocabModal(v) {
@@ -566,21 +599,27 @@
   function loadGrammarLessons() {
     const area = document.getElementById('grammar-lessons-area');
     area.innerHTML = '<p class="text-center" style="padding:2rem">Đang tải...</p>';
-    fetch('/api/admin/grammar-lessons').then(r=>r.json()).then(res => {
-      const lessons = res.data || [];
-      area.innerHTML = `<div style="display:flex;justify-content:flex-end;margin-bottom:1rem"><button class="btn btn-primary" onclick="showAddLessonModal()"><i class="fa-solid fa-plus"></i> Thêm Bài Lý Thuyết</button></div>`;
+    fetch(`/api/admin/grammar-lessons?limit=${LIST_LIMIT}`).then(r=>r.json()).then(res => {
+      const lessons = asList(res);
+      const total = asTotal(res, lessons);
+      area.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <span class="text-muted">${total} bài lý thuyết</span>
+        <button class="btn btn-primary" onclick="showAddLessonModal()"><i class="fa-solid fa-plus"></i> Thêm Bài Lý Thuyết</button></div>`;
       if(!lessons.length) { area.innerHTML += '<div class="empty-state"><p>Chưa có bài lý thuyết. Nhấn "Thêm" để tạo mới.</p></div>'; return; }
       lessons.forEach(l => {
+        const title = l.title_vi || l.title || '(Không tiêu đề)';
+        const content = l.content_vi || l.content || '';
+        const safe = JSON.stringify(l).replace(/'/g,"&#39;");
         area.innerHTML += `<div class="admin-item">
           <div style="min-width:40px;height:40px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;font-weight:800;color:#4f46e5">D${l.day_number}</div>
-          <div class="item-body"><h4>📖 ${l.title}</h4><p>${(l.content||'').substring(0,120)}...</p>
-            <div class="item-meta"><span>Topic: ${l.topic||'N/A'}</span><span>Day ${l.day_number}</span></div></div>
+          <div class="item-body"><h4>📖 ${esc(title)}</h4><p>${esc(content.substring(0,120))}...</p>
+            <div class="item-meta"><span>Topic: ${esc(l.topic||'N/A')}</span><span>Day ${l.day_number}</span></div></div>
           <div class="item-actions">
-            <button class="btn btn-icon" onclick='showAddLessonModal(${JSON.stringify(l).replace(/'/g,"&#39;")})'><i class="fa-solid fa-pen"></i></button>
+            <button class="btn btn-icon" onclick='showAddLessonModal(${safe})'><i class="fa-solid fa-pen"></i></button>
             <button class="btn btn-icon danger" onclick="deleteLesson(${l.id})"><i class="fa-solid fa-trash"></i></button></div>
         </div>`;
       });
-    });
+    }).catch(e => { area.innerHTML = `<p style="color:red;padding:2rem">Lỗi: ${esc(e.message)}</p>`; });
   }
 
   function showAddLessonModal(l) {
@@ -626,18 +665,23 @@
   function loadGrammarExercises() {
     const area = document.getElementById('grammar-exercises-area');
     area.innerHTML = '<p class="text-center" style="padding:2rem">Đang tải...</p>';
-    fetch('/api/admin/grammar').then(r=>r.json()).then(exs => {
-      area.innerHTML = `<div style="display:flex;justify-content:flex-end;margin-bottom:1rem"><button class="btn btn-primary" onclick="showAddExerciseModal()"><i class="fa-solid fa-plus"></i> Thêm Câu Hỏi</button></div>`;
+    fetch(`/api/admin/grammar?limit=${LIST_LIMIT}`).then(r=>r.json()).then(res => {
+      const exs = asList(res);
+      const total = asTotal(res, exs);
+      area.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <span class="text-muted">${total} câu hỏi</span>
+        <button class="btn btn-primary" onclick="showAddExerciseModal()"><i class="fa-solid fa-plus"></i> Thêm Câu Hỏi</button></div>`;
       if(!exs.length) { area.innerHTML += '<div class="empty-state"><p>Chưa có bài tập nào.</p></div>'; return; }
       exs.forEach((ex,i) => {
+        const opts = Array.isArray(ex.options) ? ex.options : [];
         area.innerHTML += `<div class="admin-item">
           <div style="min-width:40px;height:40px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;font-weight:800;color:#d97706">${i+1}</div>
-          <div class="item-body"><h4>${ex.question}</h4><p>✅ Đáp án: <strong>${ex.correct_answer}</strong> | Options: ${(ex.options||[]).join(', ')}</p>
-            <div class="item-meta"><span>${ex.grammar_topic||''}</span><span>Day ${ex.day_number}</span></div></div>
+          <div class="item-body"><h4>${esc(ex.question)}</h4><p>✅ Đáp án: <strong>${esc(ex.correct_answer)}</strong> | Options: ${esc(opts.join(', '))}</p>
+            <div class="item-meta"><span>${esc(ex.grammar_topic||'')}</span><span>Day ${ex.day_number}</span></div></div>
           <div class="item-actions"><button class="btn btn-icon danger" onclick="deleteExercise(${ex.id})"><i class="fa-solid fa-trash"></i></button></div>
         </div>`;
       });
-    });
+    }).catch(e => { area.innerHTML = `<p style="color:red;padding:2rem">Lỗi: ${esc(e.message)}</p>`; });
   }
 
   function showAddExerciseModal() {
@@ -667,72 +711,86 @@
   function loadReading() {
     const area = document.getElementById('reading-list');
     area.innerHTML = '<p class="text-center" style="padding:2rem">Đang tải...</p>';
-    fetch('/api/admin/reading').then(r=>r.json()).then(items => {
+    fetch(`/api/admin/reading?limit=${LIST_LIMIT}`).then(r=>r.json()).then(res => {
+      const items = asList(res);
+      const total = asTotal(res, items);
       if(!items.length) { area.innerHTML='<div class="empty-state"><p>Chưa có bài đọc.</p></div>'; return; }
-      area.innerHTML = items.map(it => `<div class="admin-item">
+      area.innerHTML = `<p class="text-muted" style="margin-bottom:1rem">${total} bài đọc</p>` + items.map(it => {
+        const qs = Array.isArray(it.questions) ? it.questions : [];
+        return `<div class="admin-item">
         <div style="min-width:40px;height:40px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;color:#2563eb"><i class="fa-solid fa-book-open-reader"></i></div>
-        <div class="item-body"><h4>${it.title}</h4><p>${(it.content||'').substring(0,200)}...</p>
-          <div class="item-meta"><span>${it.category||''}</span><span>Day ${it.day_number}</span><span>${(it.questions||[]).length} câu hỏi</span></div></div>
+        <div class="item-body"><h4>${esc(it.title)}</h4><p>${esc((it.content||'').substring(0,200))}...</p>
+          <div class="item-meta"><span>${esc(it.category||'')}</span><span>Day ${it.day_number}</span><span>${qs.length} câu hỏi</span></div></div>
         <div class="item-actions"><button class="btn btn-icon danger" onclick="delItem('reading',${it.id})"><i class="fa-solid fa-trash"></i></button></div>
-      </div>`).join('');
-    });
+      </div>`;
+      }).join('');
+    }).catch(e => { area.innerHTML = `<p style="color:red;padding:2rem">Lỗi: ${esc(e.message)}</p>`; });
   }
 
   // ==================== LISTENING ====================
   function loadListening() {
     const area = document.getElementById('listening-list');
     area.innerHTML = '<p class="text-center" style="padding:2rem">Đang tải...</p>';
-    fetch('/api/admin/listening').then(r=>r.json()).then(items => {
+    fetch(`/api/admin/listening?limit=${LIST_LIMIT}`).then(r=>r.json()).then(res => {
+      const items = asList(res);
+      const total = asTotal(res, items);
       if(!items.length) { area.innerHTML='<div class="empty-state"><p>Chưa có bài nghe.</p></div>'; return; }
-      area.innerHTML = items.map(it => `<div class="admin-item">
+      area.innerHTML = `<p class="text-muted" style="margin-bottom:1rem">${total} bài nghe</p>` + items.map(it => {
+        const qs = Array.isArray(it.questions) ? it.questions : [];
+        return `<div class="admin-item">
         <div style="min-width:40px;height:40px;border-radius:50%;background:#fce4ec;display:flex;align-items:center;justify-content:center;color:#e11d48"><i class="fa-solid fa-headphones"></i></div>
-        <div class="item-body"><h4>🎧 ${it.title}</h4><p>${(it.dialogue||'').substring(0,200)}...</p>
-          <div class="item-meta"><span>${it.category||''}</span><span>Day ${it.day_number}</span><span>${(it.questions||[]).length} câu hỏi</span></div></div>
+        <div class="item-body"><h4>🎧 ${esc(it.title)}</h4><p>${esc((it.dialogue||'').substring(0,200))}...</p>
+          <div class="item-meta"><span>${esc(it.category||'')}</span><span>Day ${it.day_number}</span><span>${qs.length} câu hỏi</span></div></div>
         <div class="item-actions"><button class="btn btn-icon danger" onclick="delItem('listening',${it.id})"><i class="fa-solid fa-trash"></i></button></div>
-      </div>`).join('');
-    });
+      </div>`;
+      }).join('');
+    }).catch(e => { area.innerHTML = `<p style="color:red;padding:2rem">Lỗi: ${esc(e.message)}</p>`; });
   }
 
   // ==================== SPEAKING ====================
   function loadSpeaking() {
     const area = document.getElementById('speaking-list');
     area.innerHTML = '<p class="text-center" style="padding:2rem">Đang tải...</p>';
-    fetch('/api/admin/speaking').then(r=>r.json()).then(items => {
+    fetch(`/api/admin/speaking?limit=${LIST_LIMIT}`).then(r=>r.json()).then(res => {
+      const items = asList(res);
+      const total = asTotal(res, items);
       if(!items.length) { area.innerHTML='<div class="empty-state"><p>Chưa có chủ đề nói.</p></div>'; return; }
-      area.innerHTML = items.map(it => `<div class="admin-item">
+      area.innerHTML = `<p class="text-muted" style="margin-bottom:1rem">${total} chủ đề nói</p>` + items.map(it => `<div class="admin-item">
         <div style="min-width:40px;height:40px;border-radius:50%;background:#d1fae5;display:flex;align-items:center;justify-content:center;color:#059669"><i class="fa-solid fa-microphone"></i></div>
-        <div class="item-body"><h4>🎤 ${it.prompt}</h4><p>${it.key_phrases||'N/A'}</p>
-          <div class="item-meta"><span>${it.category||''}</span><span>Day ${it.day_number}</span></div></div>
+        <div class="item-body"><h4>🎤 ${esc(it.prompt)}</h4><p>${esc(it.key_phrases||'N/A')}</p>
+          <div class="item-meta"><span>${esc(it.category||'')}</span><span>Day ${it.day_number}</span></div></div>
         <div class="item-actions"><button class="btn btn-icon danger" onclick="delItem('speaking',${it.id})"><i class="fa-solid fa-trash"></i></button></div>
       </div>`).join('');
-    });
+    }).catch(e => { area.innerHTML = `<p style="color:red;padding:2rem">Lỗi: ${esc(e.message)}</p>`; });
   }
 
   // ==================== WRITING ====================
   function loadWriting() {
     const area = document.getElementById('writing-list');
     area.innerHTML = '<p class="text-center" style="padding:2rem">Đang tải...</p>';
-    fetch('/api/admin/writing').then(r=>r.json()).then(items => {
+    fetch(`/api/admin/writing?limit=${LIST_LIMIT}`).then(r=>r.json()).then(res => {
+      const items = asList(res);
+      const total = asTotal(res, items);
       if(!items.length) { area.innerHTML='<div class="empty-state"><p>Chưa có đề viết.</p></div>'; return; }
-      area.innerHTML = items.map(it => `<div class="admin-item">
+      area.innerHTML = `<p class="text-muted" style="margin-bottom:1rem">${total} đề viết</p>` + items.map(it => `<div class="admin-item">
         <div style="min-width:40px;height:40px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;color:#d97706"><i class="fa-solid fa-file-pen"></i></div>
-        <div class="item-body"><h4>✍️ ${it.title}</h4><p>${(it.prompt||'').substring(0,200)}...</p>
-          <div class="item-meta"><span>${it.category||''}</span><span>Day ${it.day_number}</span><span>Limit: ${it.word_limit} words</span></div></div>
+        <div class="item-body"><h4>✍️ ${esc(it.title)}</h4><p>${esc((it.prompt||'').substring(0,200))}...</p>
+          <div class="item-meta"><span>${esc(it.category||'')}</span><span>Day ${it.day_number}</span><span>Limit: ${it.word_limit} words</span></div></div>
         <div class="item-actions"><button class="btn btn-icon danger" onclick="delItem('writing',${it.id})"><i class="fa-solid fa-trash"></i></button></div>
       </div>`).join('');
-    });
+    }).catch(e => { area.innerHTML = `<p style="color:red;padding:2rem">Lỗi: ${esc(e.message)}</p>`; });
   }
 
   // ==================== ROLES ====================
   function loadRoles() {
-    fetch('/api/admin/users').then(r=>r.json()).then(res => {
-      const users = Array.isArray(res) ? res : (res.data || []);
+    fetch(`/api/admin/users?limit=${LIST_LIMIT}`).then(r=>r.json()).then(res => {
+      const users = asList(res);
       const admins = users.filter(u => u.role === 'role_admin');
       const students = users.filter(u => u.role !== 'role_admin');
       document.getElementById('roles-grid').innerHTML = `
         <div class="role-card admin"><i class="fa-solid fa-crown role-icon"></i><h3>Admin</h3><p>Chỉ quản lý hệ thống: nội dung, người dùng, chủ đề. Không học trên app.</p><span>${admins.length} Users</span></div>
         <div class="role-card student"><i class="fa-solid fa-user-graduate role-icon"></i><h3>Người dùng</h3><p>Học tập, theo dõi tiến độ trên trang chính.</p><span>${students.length} Users</span></div>`;
-    });
+    }).catch(e => { document.getElementById('roles-grid').innerHTML = `<p style="color:red">Lỗi: ${esc(e.message)}</p>`; });
   }
 
   // ==================== GENERIC DELETE ====================
@@ -745,13 +803,16 @@
   function loadTopics() {
     const area = document.getElementById('topics-list');
     area.innerHTML = '<p class="text-center" style="padding:2rem">Đang tải...</p>';
-    fetch('/api/admin/topics').then(r=>r.json()).then(topics => {
+    fetch('/api/admin/topics').then(r=>r.json()).then(res => {
+      const topics = asList(res);
       if(!topics.length) { area.innerHTML='<div class="empty-state"><p>Chưa có chủ đề nào.</p></div>'; return; }
-      area.innerHTML = topics.map(t => `<div class="admin-item" style="border-left:4px solid ${t.color||'#4f46e5'}">
+      area.innerHTML = `<p class="text-muted" style="margin-bottom:1rem">${topics.length} chủ đề</p>` + topics.map(t => {
+        const safe = JSON.stringify(t).replace(/'/g,"&#39;");
+        return `<div class="admin-item" style="border-left:4px solid ${t.color||'#4f46e5'}">
         <div style="min-width:48px;height:48px;border-radius:50%;background:${t.color||'#4f46e5'}20;display:flex;align-items:center;justify-content:center;font-size:24px">${t.icon||'🌍'}</div>
         <div class="item-body">
-          <h4>${t.icon||'🌍'} ${t.name} <span style="font-size:0.75rem;color:var(--text-muted);font-weight:400">(${t.slug})</span></h4>
-          <p>${t.description||''}</p>
+          <h4>${t.icon||'🌍'} ${esc(t.name)} <span style="font-size:0.75rem;color:var(--text-muted);font-weight:400">(${esc(t.slug)})</span></h4>
+          <p>${esc(t.description||'')}</p>
           <div class="item-meta">
             <span style="background:${t.color||'#4f46e5'}20;color:${t.color||'#4f46e5'}">👥 ${t.user_count||0} users</span>
             <span style="background:${t.color||'#4f46e5'}20;color:${t.color||'#4f46e5'}">📚 ${t.vocab_count||0} từ vựng</span>
@@ -759,11 +820,12 @@
           </div>
         </div>
         <div class="item-actions">
-          <button class="btn btn-icon" onclick='showAddTopicModal(${JSON.stringify(t).replace(/'/g,"&#39;")})'><i class="fa-solid fa-pen"></i></button>
+          <button class="btn btn-icon" onclick='showAddTopicModal(${safe})'><i class="fa-solid fa-pen"></i></button>
           ${t.slug==='general'?'':`<button class="btn btn-icon danger" onclick="deleteTopic(${t.id})"><i class="fa-solid fa-trash"></i></button>`}
         </div>
-      </div>`).join('');
-    });
+      </div>`;
+      }).join('');
+    }).catch(e => { area.innerHTML = `<p style="color:red;padding:2rem">Lỗi: ${esc(e.message)}</p>`; });
   }
 
   function showAddTopicModal(t) {
@@ -798,16 +860,18 @@
   function loadVideos() {
     const area = document.getElementById('video-area');
     area.innerHTML = '<div style="display:flex;justify-content:center;padding:2rem"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>';
-    fetch('/api/youtube-listening').then(r=>r.json()).then(videos => {
+    fetch('/api/youtube-listening').then(r=>r.json()).then(res => {
+      const videos = asList(res);
       area.innerHTML = '';
       if(!videos.length) { area.innerHTML = '<div class="empty-state"><p>Chưa có video. Nhấn "Import Video" để thêm.</p></div>'; return; }
+      area.innerHTML = `<p class="text-muted" style="margin-bottom:1rem">${videos.length} video</p>`;
       videos.forEach(v => {
         area.innerHTML += `<div class="admin-item" style="display:flex; justify-content:space-between; align-items:center;">
           <div style="display:flex; gap:16px;">
-            <img src="https://img.youtube.com/vi/${v.youtube_id}/mqdefault.jpg" style="width:120px; height:68px; border-radius:8px; object-fit:cover;" />
+            <img src="https://img.youtube.com/vi/${esc(v.youtube_id)}/mqdefault.jpg" style="width:120px; height:68px; border-radius:8px; object-fit:cover;" />
             <div class="item-body">
-              <h4 style="margin:0 0 4px 0">${v.title}</h4>
-              <p style="color:#666; font-size:13px; margin:0">${v.category} | ${v.level} | Day ${v.day_number} | Thời lượng: ${v.duration}</p>
+              <h4 style="margin:0 0 4px 0">${esc(v.title)}</h4>
+              <p style="color:#666; font-size:13px; margin:0">${esc(v.category)} | ${esc(v.level)} | Day ${v.day_number} | Thời lượng: ${esc(v.duration||'')}</p>
             </div>
           </div>
           <div class="item-actions">
@@ -815,7 +879,7 @@
           </div>
         </div>`;
       });
-    });
+    }).catch(e => { area.innerHTML = `<p style="color:red;padding:2rem">Lỗi: ${esc(e.message)}</p>`; });
   }
 
   function showImportVideoModal() {
@@ -864,10 +928,6 @@
     if(!confirm('Bạn có chắc muốn xóa video này? Khôi phục lại sẽ phải tải lại Sub!')) return;
     fetch('/api/admin/youtube-import/' + id, {method:'DELETE'}).then(()=>loadVideos());
   }
-
-  // ==================== UTIL ====================
-  function setText(id,val) { const el=document.getElementById(id); if(el) el.textContent = typeof val==='number'?val.toLocaleString():(val||'0'); }
-  function gv(id) { return document.getElementById(id)?.value||''; }
 
   // INIT
   checkAuth();

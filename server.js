@@ -731,9 +731,11 @@ app.get('/api/companies/:id/detail', async (req, res) => {
 // Pagination helper
 function getPagination(req) {
   const page = Math.max(1, parseInt(req.query.page) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+  const limit = Math.min(5000, Math.max(1, parseInt(req.query.limit) || 100));
   const offset = (page - 1) * limit;
-  return { page, limit, offset };
+  // Inline LIMIT/OFFSET — mysql2 prepared statements often reject placeholders here
+  const limitSql = ` LIMIT ${limit} OFFSET ${offset}`;
+  return { page, limit, offset, limitSql };
 }
 
 app.get('/api/admin/dashboard', async (req, res) => {
@@ -935,7 +937,7 @@ app.put('/api/auth/topics', async (req, res) => {
 // --- Admin Users CRUD ---
 app.get('/api/admin/users', async (req, res) => {
   try {
-    const { page, limit, offset } = getPagination(req);
+    const { page, limit, limitSql } = getPagination(req);
     const search = req.query.search;
     let whereSql = '';
     const params = [];
@@ -945,7 +947,7 @@ app.get('/api/admin/users', async (req, res) => {
     }
     const countResult = await query('SELECT COUNT(*) as total FROM users' + whereSql, params);
     const total = countResult[0].total;
-    const rows = await query('SELECT id, username, display_name, english_level, job_role, role, streak_days, last_study_date FROM users' + whereSql + ' ORDER BY role DESC, streak_days DESC LIMIT ? OFFSET ?', [...params, limit, offset]);
+    const rows = await query('SELECT id, username, display_name, english_level, job_role, role, streak_days, last_study_date FROM users' + whereSql + ' ORDER BY role DESC, streak_days DESC' + limitSql, params);
     res.json({ data: rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -978,7 +980,7 @@ app.delete('/api/admin/users/:id', async (req, res) => {
 // --- Admin Vocabulary CRUD ---
 app.get('/api/admin/vocabulary', async (req, res) => {
   try {
-    const { page, limit, offset } = getPagination(req);
+    const { page, limit, limitSql } = getPagination(req);
     const cat = req.query.category;
     const search = req.query.search;
     let baseSql = 'FROM vocabulary';
@@ -989,7 +991,7 @@ app.get('/api/admin/vocabulary', async (req, res) => {
     if (conditions.length) baseSql += ' WHERE ' + conditions.join(' AND ');
     const countResult = await query('SELECT COUNT(*) as total ' + baseSql, params);
     const total = countResult[0].total;
-    const rows = await query('SELECT * ' + baseSql + ' ORDER BY day_number, id LIMIT ? OFFSET ?', [...params, limit, offset]);
+    const rows = await query('SELECT * ' + baseSql + ' ORDER BY day_number, id' + limitSql, params);
     res.json({ data: rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1031,10 +1033,10 @@ app.delete('/api/admin/vocabulary/:id', async (req, res) => {
 // --- Admin Grammar Lessons CRUD ---
 app.get('/api/admin/grammar-lessons', async (req, res) => {
   try {
-    const { page, limit, offset } = getPagination(req);
+    const { page, limit, limitSql } = getPagination(req);
     const countResult = await query('SELECT COUNT(*) as total FROM grammar_lessons');
     const total = countResult[0].total;
-    const rows = await query('SELECT * FROM grammar_lessons ORDER BY day_number, id LIMIT ? OFFSET ?', [limit, offset]);
+    const rows = await query('SELECT * FROM grammar_lessons ORDER BY day_number, id' + limitSql);
     res.json({ data: rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1069,10 +1071,10 @@ app.delete('/api/admin/grammar-lessons/:id', async (req, res) => {
 // --- Admin Grammar CRUD ---
 app.get('/api/admin/grammar', async (req, res) => {
   try {
-    const { page, limit, offset } = getPagination(req);
+    const { page, limit, limitSql } = getPagination(req);
     const countResult = await query('SELECT COUNT(*) as total FROM grammar_exercises');
     const total = countResult[0].total;
-    const rows = await query('SELECT * FROM grammar_exercises ORDER BY day_number, id LIMIT ? OFFSET ?', [limit, offset]);
+    const rows = await query('SELECT * FROM grammar_exercises ORDER BY day_number, id' + limitSql);
     rows.forEach(r => { if (typeof r.options === 'string') r.options = JSON.parse(r.options); });
     res.json({ data: rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1195,10 +1197,10 @@ app.delete('/api/admin/grammar/:id', async (req, res) => {
 // --- Admin Reading CRUD ---
 app.get('/api/admin/reading', async (req, res) => {
   try {
-    const { page, limit, offset } = getPagination(req);
+    const { page, limit, limitSql } = getPagination(req);
     const countResult = await query('SELECT COUNT(*) as total FROM reading_passages');
     const total = countResult[0].total;
-    const rows = await query('SELECT * FROM reading_passages ORDER BY day_number LIMIT ? OFFSET ?', [limit, offset]);
+    const rows = await query('SELECT * FROM reading_passages ORDER BY day_number' + limitSql);
     rows.forEach(r => { if (typeof r.questions === 'string') r.questions = JSON.parse(r.questions); });
     res.json({ data: rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1224,10 +1226,10 @@ app.delete('/api/admin/reading/:id', async (req, res) => {
 // --- Admin Listening CRUD ---
 app.get('/api/admin/listening', async (req, res) => {
   try {
-    const { page, limit, offset } = getPagination(req);
+    const { page, limit, limitSql } = getPagination(req);
     const countResult = await query('SELECT COUNT(*) as total FROM listening_dialogues');
     const total = countResult[0].total;
-    const rows = await query('SELECT * FROM listening_dialogues ORDER BY day_number LIMIT ? OFFSET ?', [limit, offset]);
+    const rows = await query('SELECT * FROM listening_dialogues ORDER BY day_number' + limitSql);
     rows.forEach(r => { if (typeof r.questions === 'string') r.questions = JSON.parse(r.questions); });
     res.json({ data: rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -1253,10 +1255,10 @@ app.delete('/api/admin/listening/:id', async (req, res) => {
 // --- Admin Speaking CRUD ---
 app.get('/api/admin/speaking', async (req, res) => {
   try {
-    const { page, limit, offset } = getPagination(req);
+    const { page, limit, limitSql } = getPagination(req);
     const countResult = await query('SELECT COUNT(*) as total FROM speaking_prompts');
     const total = countResult[0].total;
-    const rows = await query('SELECT * FROM speaking_prompts ORDER BY day_number LIMIT ? OFFSET ?', [limit, offset]);
+    const rows = await query('SELECT * FROM speaking_prompts ORDER BY day_number' + limitSql);
     res.json({ data: rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1280,10 +1282,10 @@ app.delete('/api/admin/speaking/:id', async (req, res) => {
 // --- Admin Writing CRUD ---
 app.get('/api/admin/writing', async (req, res) => {
   try {
-    const { page, limit, offset } = getPagination(req);
+    const { page, limit, limitSql } = getPagination(req);
     const countResult = await query('SELECT COUNT(*) as total FROM writing_tasks');
     const total = countResult[0].total;
-    const rows = await query('SELECT * FROM writing_tasks ORDER BY day_number LIMIT ? OFFSET ?', [limit, offset]);
+    const rows = await query('SELECT * FROM writing_tasks ORDER BY day_number' + limitSql);
     res.json({ data: rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
