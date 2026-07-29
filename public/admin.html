@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Admin Dashboard - Eagle English</title>
+  <link rel="stylesheet" href="css/admin.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Extra admin styles inline to avoid cache issues */
+    .admin-login-overlay { position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4f46e5 100%);z-index:9999;display:flex;align-items:center;justify-content:center; }
+    .admin-login-box { background:white;border-radius:20px;padding:3rem;width:400px;max-width:90vw;text-align:center;box-shadow:0 25px 50px rgba(0,0,0,0.3); }
+    .admin-login-box h2 { font-size:1.6rem;margin-bottom:0.5rem; }
+    .admin-login-box p { color:var(--text-muted);margin-bottom:2rem;font-size:0.9rem; }
+    .admin-login-box input { width:100%;padding:0.8rem 1rem;border:1px solid var(--border-color);border-radius:10px;margin-bottom:1rem;font-size:1rem;outline:none;font-family:'Outfit',sans-serif; }
+    .admin-login-box input:focus { border-color:var(--primary-color);box-shadow:0 0 0 3px rgba(79,70,229,0.1); }
+    .admin-login-box .login-btn { width:100%;padding:0.9rem;background:var(--primary-color);color:white;border:none;border-radius:10px;font-size:1rem;font-weight:600;cursor:pointer;transition:all 0.3s; }
+    .admin-login-box .login-btn:hover { background:var(--primary-hover);transform:translateY(-2px); }
+    .admin-login-box .error-msg { color:var(--danger-color);font-size:0.85rem;margin-top:0.5rem;min-height:20px; }
+    .modal-overlay { position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px; }
+    .modal-overlay.hidden { display:none; }
+    .modal-content { background:white;border-radius:16px;max-width:650px;width:100%;max-height:85vh;overflow-y:auto;padding:2rem;position:relative;animation:fadeIn 0.3s ease; }
+    .modal-content h2 { margin-bottom:1.5rem; }
+    .modal-content .form-group { margin-bottom:1rem; }
+    .modal-content label { display:block;font-weight:600;margin-bottom:4px;font-size:0.9rem; }
+    .modal-content input,.modal-content select,.modal-content textarea { width:100%;padding:0.6rem 1rem;border:1px solid var(--border-color);border-radius:8px;outline:none;font-family:'Outfit',sans-serif; }
+    .modal-content textarea { min-height:100px;resize:vertical; }
+    .modal-actions { display:flex;gap:1rem;justify-content:flex-end;margin-top:1.5rem; }
+    .close-modal { position:absolute;top:12px;right:16px;border:none;background:none;font-size:24px;cursor:pointer;color:var(--text-muted); }
+    .admin-item { background:white;border:1px solid var(--border-color);border-radius:var(--radius);padding:1.2rem 1.5rem;margin-bottom:1rem;display:flex;align-items:flex-start;gap:1.5rem; }
+    .admin-item .item-body { flex:1; }
+    .admin-item .item-body h4 { font-size:1.05rem;margin-bottom:4px; }
+    .admin-item .item-body p { color:var(--text-muted);font-size:0.85rem;max-height:60px;overflow:hidden; }
+    .admin-item .item-meta { display:flex;gap:0.5rem;margin-top:8px;flex-wrap:wrap; }
+    .admin-item .item-meta span { background:var(--bg-color);padding:2px 10px;border-radius:20px;font-size:0.75rem;font-weight:600; }
+    .admin-item .item-actions { display:flex;gap:0.5rem;align-items:center;flex-shrink:0; }
+    .empty-state { text-align:center;padding:3rem;color:var(--text-muted); }
+    .filter-bar { display:flex;gap:1rem;margin-bottom:1.5rem; }
+    .filter-bar select,.filter-bar input { padding:0.6rem 1rem;border:1px solid var(--border-color);border-radius:8px;outline:none; }
+    .filter-bar input { flex:1; }
+  </style>
+</head>
+<body>
+
+  <!-- ADMIN LOGIN FORM (hiển thị nếu chưa đăng nhập) -->
+  <div class="admin-login-overlay" id="admin-login-overlay">
+    <div class="admin-login-box">
+      <i class="fa-solid fa-shield-halved" style="font-size:3rem;color:var(--primary-color);margin-bottom:1rem"></i>
+      <h2>Admin Panel</h2>
+      <p>Đăng nhập bằng tài khoản quản trị viên.</p>
+      <input type="text" id="admin-username" placeholder="Username" autocomplete="username">
+      <input type="password" id="admin-password" placeholder="Password" autocomplete="current-password">
+      <button class="login-btn" onclick="adminLogin()">Đăng Nhập Admin</button>
+      <div class="error-msg" id="admin-error"></div>
+    </div>
+  </div>
+
+  <div class="admin-container" id="admin-app" style="display:none">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <i class="fa-solid fa-feather-pointed"></i>
+        <h2>Eagle Admin</h2>
+      </div>
+      <ul class="nav-links">
+        <li class="active" data-view="dashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</li>
+        <li data-view="users"><i class="fa-solid fa-users"></i> Người Dùng</li>
+        <li data-view="vocabulary"><i class="fa-solid fa-book-open"></i> Từ Vựng</li>
+        <li data-view="grammar"><i class="fa-solid fa-graduation-cap"></i> Ngữ Pháp & Lý Thuyết</li>
+        <li data-view="exercises"><i class="fa-solid fa-pen-to-square"></i> Bài Đọc (Reading)</li>
+        <li data-view="listening"><i class="fa-solid fa-headphones"></i> Listening</li>
+        <li data-view="speaking"><i class="fa-solid fa-microphone-lines"></i> Speaking</li>
+        <li data-view="writing"><i class="fa-solid fa-file-pen"></i> Writing</li>
+        <li data-view="videos"><i class="fa-solid fa-video"></i> Video (StudyPhim)</li>
+        <li data-view="topics"><i class="fa-solid fa-tags"></i> Chủ Đề</li>
+        <li data-view="roles"><i class="fa-solid fa-user-shield"></i> Phân Quyền</li>
+        <li class="logout" onclick="adminLogout()"><i class="fa-solid fa-right-from-bracket"></i> Đăng Xuất</li>
+      </ul>
+    </aside>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="document.getElementById('sidebar').classList.remove('mobile-open');this.style.display='none'"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="topbar">
+        <div class="toggle-btn" id="toggle-sidebar"><i class="fa-solid fa-bars"></i></div>
+        <div class="search-bar"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Tìm kiếm..."></div>
+        <div class="profile-area">
+          <div class="notification"><i class="fa-regular fa-bell"></i><span class="badge" id="notif-count">0</span></div>
+          <div class="profile-info">
+            <img src="https://ui-avatars.com/api/?name=Admin&background=4f46e5&color=fff" alt="Admin">
+            <span id="admin-name">Admin</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="view-container">
+        <!-- DASHBOARD -->
+        <section class="view active" id="view-dashboard">
+          <div class="page-header"><h1>Tổng Quan Hệ Thống</h1><p>Thống kê dữ liệu thực từ MySQL database.</p></div>
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-icon users"><i class="fa-solid fa-users"></i></div><div class="stat-details"><h3>Tổng Users</h3><h2 id="stat-users">...</h2><p class="trend positive">users table</p></div></div>
+            <div class="stat-card"><div class="stat-icon vocab"><i class="fa-solid fa-book"></i></div><div class="stat-details"><h3>Tổng Từ Vựng</h3><h2 id="stat-vocab">...</h2><p class="trend positive">vocabulary table</p></div></div>
+            <div class="stat-card"><div class="stat-icon visits"><i class="fa-solid fa-eye"></i></div><div class="stat-details"><h3>Check-in</h3><h2 id="stat-visits">...</h2><p class="trend mixed">user_checkins</p></div></div>
+            <div class="stat-card"><div class="stat-icon tasks"><i class="fa-solid fa-list-check"></i></div><div class="stat-details"><h3>Bài Đã Làm</h3><h2 id="stat-tests">...</h2><p class="trend mixed">user_progress</p></div></div>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-icon" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-pen-to-square"></i></div><div class="stat-details"><h3>Grammar Ex.</h3><h2 id="stat-grammar">...</h2></div></div>
+            <div class="stat-card"><div class="stat-icon" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-book-open-reader"></i></div><div class="stat-details"><h3>Reading</h3><h2 id="stat-reading">...</h2></div></div>
+            <div class="stat-card"><div class="stat-icon" style="background:#fce4ec;color:#e11d48"><i class="fa-solid fa-headphones"></i></div><div class="stat-details"><h3>Listening</h3><h2 id="stat-listening">...</h2></div></div>
+            <div class="stat-card"><div class="stat-icon" style="background:#d1fae5;color:#059669"><i class="fa-solid fa-microphone"></i></div><div class="stat-details"><h3>Speaking</h3><h2 id="stat-speaking">...</h2></div></div>
+            <div class="stat-card"><div class="stat-icon" style="background:#ede9fe;color:#7c3aed"><i class="fa-solid fa-tags"></i></div><div class="stat-details"><h3>Chủ Đề</h3><h2 id="stat-topics">...</h2></div></div>
+            <div class="stat-card"><div class="stat-icon" style="background:#ffedd5;color:#f97316"><i class="fa-solid fa-video"></i></div><div class="stat-details"><h3>Video</h3><h2 id="stat-videos">...</h2></div></div>
+          </div>
+        </section>
+
+        <!-- USERS -->
+        <section class="view" id="view-users">
+          <div class="page-header"><h1>Quản Lý Người Dùng</h1><p>Dữ liệu thực từ bảng users.</p></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Tên</th><th>Username</th><th>Role</th><th>Level</th><th>Streaks</th><th>Hành động</th></tr></thead>
+          <tbody id="users-tbody"><tr><td colspan="6" class="text-center">Đang tải...</td></tr></tbody></table></div>
+        </section>
+
+        <!-- VOCABULARY -->
+        <section class="view" id="view-vocabulary">
+          <div class="page-header flex-between"><div><h1>Quản Lý Từ Vựng</h1><p>Thêm/sửa/xóa từ vựng. User sẽ thấy ngay khi refresh.</p></div>
+            <button class="btn btn-primary" onclick="showAddVocabModal()"><i class="fa-solid fa-plus"></i> Thêm Từ Mới</button></div>
+          <div class="filter-bar">
+            <select id="vocab-cat-filter" onchange="loadVocabulary()"><option value="">Tất cả danh mục</option></select>
+            <input type="text" id="vocab-search" placeholder="Tìm từ vựng..." oninput="loadVocabulary()">
+          </div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Từ vựng</th><th>Loại</th><th>Nghĩa (VN)</th><th>Category</th><th>Day</th><th>Hành động</th></tr></thead>
+          <tbody id="vocab-tbody"><tr><td colspan="6" class="text-center">Đang tải...</td></tr></tbody></table></div>
+        </section>
+
+        <!-- GRAMMAR -->
+        <section class="view" id="view-grammar">
+          <div class="page-header"><h1>Ngữ Pháp: Lý Thuyết & Bài Tập</h1><p>Quản lý bài lý thuyết + câu hỏi trắc nghiệm. User thấy lý thuyết trước, rồi làm bài.</p></div>
+          <div class="tabs">
+            <button class="tab-btn active" onclick="switchGrammarTab('lessons')">📖 Lý Thuyết</button>
+            <button class="tab-btn" onclick="switchGrammarTab('exercises')">📝 Bài Tập</button>
+          </div>
+          <div id="grammar-lessons-area"></div>
+          <div id="grammar-exercises-area" style="display:none"></div>
+        </section>
+
+        <!-- READING -->
+        <section class="view" id="view-exercises">
+          <div class="page-header"><h1>Bài Đọc Hiểu (Reading)</h1><p>Quản lý các bài đọc hiểu tiếng Anh theo chủ đề.</p></div>
+          <div id="reading-list"></div>
+        </section>
+
+        <!-- LISTENING -->
+        <section class="view" id="view-listening">
+          <div class="page-header"><h1>Bài Nghe (Listening)</h1><p>Quản lý các bài nghe hội thoại tiếng Anh.</p></div>
+          <div id="listening-list"></div>
+        </section>
+
+        <!-- SPEAKING -->
+        <section class="view" id="view-speaking">
+          <div class="page-header"><h1>Luyện Nói (Speaking)</h1><p>Quản lý các chủ đề luyện nói tiếng Anh.</p></div>
+          <div id="speaking-list"></div>
+        </section>
+
+        <!-- WRITING -->
+        <section class="view" id="view-writing">
+          <div class="page-header"><h1>Viết (Writing)</h1><p>Quản lý các bài tập viết tiếng Anh.</p></div>
+          <div id="writing-list"></div>
+        </section>
+
+        <!-- TOPICS -->
+        <section class="view" id="view-videos">
+          <div class="view-header">
+            <h2>Quản lý Video (StudyPhim)</h2>
+            <button class="btn btn-primary" onclick="showImportVideoModal()"><i class="fa-solid fa-cloud-arrow-up"></i> Import Text/Video Mới</button>
+          </div>
+          <div id="video-area"></div>
+        </section>
+
+        <section class="view" id="view-topics">
+          <div class="page-header flex-between"><div><h1>Quản Lý Chủ Đề</h1><p>Tạo các chủ đề dành cho từng tệp khách hàng: Developer, BA, Trẻ em, Sinh viên...</p></div>
+            <button class="btn btn-primary" onclick="showAddTopicModal()"><i class="fa-solid fa-plus"></i> Thêm Chủ Đề</button></div>
+          <div id="topics-list"></div>
+        </section>
+
+        <!-- ROLES -->
+        <section class="view" id="view-roles">
+          <div class="page-header"><h1>Phân Quyền</h1><p>Thống kê theo role từ bảng users.</p></div>
+          <div class="roles-grid" id="roles-grid"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL -->
+  <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal-content" id="modal-content"></div>
+  </div>
+
+  <script>
+  // ==================== AUTH ====================
+  let _adminUser = null;
+
+  function checkAuth() {
+    const saved = localStorage.getItem('user');
+    if (saved) {
+      const u = JSON.parse(saved);
+      if (u.role === 'role_admin') { showAdminApp(u); return; }
+    }
+    document.getElementById('admin-login-overlay').style.display = 'flex';
+    document.getElementById('admin-app').style.display = 'none';
+  }
+
+  async function adminLogin() {
+    const u = document.getElementById('admin-username').value.trim();
+    const p = document.getElementById('admin-password').value;
+    document.getElementById('admin-error').textContent = '';
+    if (!u || !p) { document.getElementById('admin-error').textContent = 'Vui lòng nhập đầy đủ thông tin.'; return; }
+    try {
+      const res = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u,password:p}) });
+      const data = await res.json();
+      if (!res.ok) {
+        alert('Tài khoản hoặc mật khẩu không chính xác!');
+        document.getElementById('admin-error').textContent = 'Tài khoản hoặc mật khẩu không chính xác!';
+        return;
+      }
+      if (data.role !== 'role_admin') { alert('Tài khoản này không có quyền Admin!'); return; }
+      localStorage.setItem('user', JSON.stringify(data));
+      showAdminApp(data);
+    } catch (e) {
+      alert('Tài khoản hoặc mật khẩu không chính xác!');
+      document.getElementById('admin-error').textContent = 'Tài khoản hoặc mật khẩu không chính xác!';
+    }
+  }
+
+  function showAdminApp(user) {
+    _adminUser = user;
+    document.getElementById('admin-login-overlay').style.display = 'none';
+    document.getElementById('admin-app').style.display = 'flex';
+    document.getElementById('admin-name').textContent = user.display_name || user.username;
+    initNav();
+    loadDashboard();
+  }
+
+  function adminLogout() {
+    localStorage.removeItem('user');
+    _adminUser = null;
+    document.getElementById('admin-login-overlay').style.display = 'flex';
+    document.getElementById('admin-app').style.display = 'none';
+  }
+
+  // ==================== NAVIGATION ====================
+  function initNav() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    document.getElementById('toggle-sidebar').addEventListener('click', () => {
+      if (window.innerWidth <= 768) {
+        sidebar.classList.toggle('mobile-open');
+        overlay.style.display = sidebar.classList.contains('mobile-open') ? 'block' : 'none';
+      } else {
+        sidebar.classList.toggle('collapsed');
+      }
+    });
+    document.querySelectorAll('.nav-links li:not(.logout)').forEach(link => {
+      link.addEventListener('click', e => {
+        document.querySelectorAll('.nav-links li').forEach(l => l.classList.remove('active'));
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        const viewId = `view-${e.currentTarget.dataset.view}`;
+        document.getElementById(viewId).classList.add('active');
+        if (window.innerWidth <= 768) {
+          sidebar.classList.remove('mobile-open');
+          overlay.style.display = 'none';
+        }
+        loadView(e.currentTarget.dataset.view);
+      });
+    });
+  }
+
+  function loadView(v) {
+    const m = { dashboard:loadDashboard, users:loadUsers, vocabulary:loadVocabulary, grammar:loadGrammar, exercises:loadReading, listening:loadListening, speaking:loadSpeaking, writing:loadWriting, videos:loadVideos, topics:loadTopics, roles:loadRoles };
+    (m[v] || loadDashboard)();
+  }
+
+  // ==================== MODAL ====================
+  function openModal(html) { document.getElementById('modal-content').innerHTML = html; document.getElementById('modal-overlay').classList.remove('hidden'); }
+  function closeModal() { document.getElementById('modal-overlay').classList.add('hidden'); }
+  document.addEventListener('click', e => { if (e.target.id === 'modal-overlay') closeModal(); });
+
+  // ==================== DASHBOARD ====================
+  function loadDashboard() {
+    fetch('/api/admin/dashboard').then(r=>r.json()).then(d => {
+      setText('stat-users', d.totalUsers);
+      setText('stat-vocab', d.totalVocab);
+      setText('stat-visits', d.totalVisits);
+      setText('stat-tests', d.totalTests);
+      setText('stat-grammar', d.totalGrammar);
+      setText('stat-reading', d.totalReading);
+      setText('stat-listening', d.totalListening);
+      setText('stat-speaking', d.totalSpeaking);
+      setText('stat-topics', d.totalTopics || 0);
+      setText('stat-videos', d.totalVideos || 0);
+    }).catch(e => console.error(e));
+  }
+
+  // ==================== USERS ====================
+  function loadUsers() {
+    const tbody = document.getElementById('users-tbody');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Đang tải...</td></tr>';
+    fetch('/api/admin/users').then(r=>r.json()).then(users => {
+      tbody.innerHTML = '';
+      if (!users.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center">Chưa có user.</td></tr>'; return; }
+      users.forEach(u => {
+        const rn = u.role==='role_admin'?'Admin':u.role==='role_teacher'?'Teacher':'Student';
+        const rc = rn==='Admin'?'#f59e0b':rn==='Teacher'?'#4f46e5':'#10b981';
+        tbody.innerHTML += `<tr>
+          <td><strong>${u.display_name||u.username}</strong></td>
+          <td class="text-muted">@${u.username}</td>
+          <td style="color:${rc};font-weight:700">${rn}</td>
+          <td>${u.english_level||'N/A'}</td>
+          <td>🔥 ${u.streak_days||0}</td>
+          <td>
+            <select onchange="updateRole('${u.id}',this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid #e5e7eb;font-size:0.8rem">
+              <option value="user" ${u.role!=='role_admin'&&u.role!=='role_teacher'?'selected':''}>Student</option>
+              <option value="role_teacher" ${u.role==='role_teacher'?'selected':''}>Teacher</option>
+              <option value="role_admin" ${u.role==='role_admin'?'selected':''}>Admin</option>
+            </select>
+            <button class="btn btn-icon danger" onclick="deleteUser('${u.id}')"><i class="fa-solid fa-trash"></i></button>
+          </td></tr>`;
+      });
+    });
+  }
+
+  function updateRole(id, role) {
+    fetch(`/api/admin/users/${id}/role`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({role})}).then(()=>loadUsers());
+  }
+  function deleteUser(id) {
+    if(!confirm('Xóa user này? Mọi dữ liệu học tập sẽ bị mất!'))return;
+    fetch(`/api/admin/users/${id}`,{method:'DELETE'}).then(()=>{loadUsers();loadDashboard();});
+  }
+
+  // ==================== VOCABULARY CRUD ====================
+  function loadVocabulary() {
+    fetch('/api/admin/vocabulary/categories').then(r=>r.json()).then(cats => {
+      const sel = document.getElementById('vocab-cat-filter');
+      const cv = sel.value;
+      sel.innerHTML = '<option value="">Tất cả danh mục</option>';
+      cats.forEach(c => sel.innerHTML += `<option value="${c.category}" ${c.category===cv?'selected':''}>${c.category} (${c.count})</option>`);
+    });
+
+    const cat = document.getElementById('vocab-cat-filter').value;
+    const search = document.getElementById('vocab-search').value;
+    let url = '/api/admin/vocabulary?';
+    if(cat) url += `category=${encodeURIComponent(cat)}&`;
+    if(search) url += `search=${encodeURIComponent(search)}&`;
+
+    const tbody = document.getElementById('vocab-tbody');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Đang tải...</td></tr>';
+    fetch(url).then(r=>r.json()).then(data => {
+      tbody.innerHTML = '';
+      if(!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center">Không có kết quả.</td></tr>'; return; }
+      data.forEach(w => {
+        tbody.innerHTML += `<tr>
+          <td><strong>${w.term}</strong></td>
+          <td>${w.word_type||'n.'}</td>
+          <td title="${w.definition_en||''}" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${w.definition_vi||''}</td>
+          <td><span style="background:#e0e7ff;color:#4f46e5;padding:3px 8px;border-radius:10px;font-size:0.75rem">${w.category}</span></td>
+          <td>Day ${w.day_number}</td>
+          <td style="min-width:90px">
+            <button class="btn btn-icon" onclick='editVocab(${JSON.stringify(w).replace(/'/g,"&#39;")})'><i class="fa-solid fa-pen"></i></button>
+            <button class="btn btn-icon danger" onclick="deleteVocab(${w.id})"><i class="fa-solid fa-trash"></i></button>
+          </td></tr>`;
+      });
+    });
+  }
+
+  function showAddVocabModal(v) {
+    const e = !!v;
+    openModal(`<button class="close-modal" onclick="closeModal()">✕</button>
+      <h2>${e?'Sửa':'Thêm'} Từ Vựng</h2>
+      <div class="form-group"><label>Từ (EN) *</label><input id="m-term" value="${v?.term||''}"></div>
+      <div class="form-group"><label>Loại từ</label><input id="m-type" value="${v?.word_type||'n.'}"></div>
+      <div class="form-group"><label>Nghĩa (VN)</label><input id="m-defvi" value="${v?.definition_vi||''}"></div>
+      <div class="form-group"><label>Nghĩa (EN)</label><input id="m-defen" value="${v?.definition_en||''}"></div>
+      <div class="form-group"><label>Category</label><input id="m-cat" value="${v?.category||'Algorithms'}" placeholder="Algorithms / Data Systems / Hardware & Infrastructure / Testing & QA"></div>
+      <div class="form-group"><label>Ví dụ 1</label><input id="m-ex1" value="${v?.example1||''}"></div>
+      <div class="form-group"><label>Ví dụ 2</label><input id="m-ex2" value="${v?.example2||''}"></div>
+      <div class="form-group"><label>Ví dụ 3</label><input id="m-ex3" value="${v?.example3||''}"></div>
+      <div class="form-group"><label>Day Number</label><input type="number" id="m-day" value="${v?.day_number||1}"></div>
+      <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="saveVocab(${v?.id||0})">${e?'Cập nhật':'Thêm mới'}</button></div>`);
+  }
+  function editVocab(v) { showAddVocabModal(v); }
+
+  function saveVocab(id) {
+    const body = {term:gv('m-term'),word_type:gv('m-type'),definition_vi:gv('m-defvi'),definition_en:gv('m-defen'),category:gv('m-cat'),example1:gv('m-ex1'),example2:gv('m-ex2'),example3:gv('m-ex3'),day_number:parseInt(gv('m-day'))||1};
+    if(!body.term) { alert('Vui lòng nhập từ vựng!'); return; }
+    fetch(id?`/api/admin/vocabulary/${id}`:'/api/admin/vocabulary',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(r=>r.json()).then(()=>{closeModal();loadVocabulary();loadDashboard();});
+  }
+  function deleteVocab(id) { if(!confirm('Xóa từ vựng này?'))return; fetch(`/api/admin/vocabulary/${id}`,{method:'DELETE'}).then(()=>{loadVocabulary();loadDashboard();}); }
+
+  // ==================== GRAMMAR ====================
+  function loadGrammar() { loadGrammarLessons(); }
+  function switchGrammarTab(tab) {
+    document.querySelectorAll('#view-grammar .tab-btn').forEach(b=>b.classList.remove('active'));
+    if (tab==='lessons') {
+      document.querySelectorAll('#view-grammar .tab-btn')[0].classList.add('active');
+      document.getElementById('grammar-lessons-area').style.display='';
+      document.getElementById('grammar-exercises-area').style.display='none';
+      loadGrammarLessons();
+    } else {
+      document.querySelectorAll('#view-grammar .tab-btn')[1].classList.add('active');
+      document.getElementById('grammar-lessons-area').style.display='none';
+      document.getElementById('grammar-exercises-area').style.display='';
+      loadGrammarExercises();
+    }
+  }
+
+  function loadGrammarLessons() {
+    const area = document.getElementById('grammar-lessons-area');
+    area.innerHTML = '<p class="text-center" style="padding:2rem">Đang tải...</p>';
+    fetch('/api/admin/grammar-lessons').then(r=>r.json()).then(res => {
+      const lessons = res.data || [];
+      area.innerHTML = `<div style="display:flex;justify-content:flex-end;margin-bottom:1rem"><button class="btn btn-primary" onclick="showAddLessonModal()"><i class="fa-solid fa-plus"></i> Thêm Bài Lý Thuyết</button></div>`;
+      if(!lessons.length) { area.innerHTML += '<div class="empty-state"><p>Chưa có bài lý thuyết. Nhấn "Thêm" để tạo mới.</p></div>'; return; }
+      lessons.forEach(l => {
+        area.innerHTML += `<div class="admin-item">
+          <div style="min-width:40px;height:40px;border-radius:50%;background:#e0e7ff;display:flex;align-items:center;justify-content:center;font-weight:800;color:#4f46e5">D${l.day_number}</div>
+          <div class="item-body"><h4>📖 ${l.title}</h4><p>${(l.content||'').substring(0,120)}...</p>
+            <div class="item-meta"><span>Topic: ${l.topic||'N/A'}</span><span>Day ${l.day_number}</span></div></div>
+          <div class="item-actions">
+            <button class="btn btn-icon" onclick='showAddLessonModal(${JSON.stringify(l).replace(/'/g,"&#39;")})'><i class="fa-solid fa-pen"></i></button>
+            <button class="btn btn-icon danger" onclick="deleteLesson(${l.id})"><i class="fa-solid fa-trash"></i></button></div>
+        </div>`;
+      });
+    });
+  }
+
+  function showAddLessonModal(l) {
+    const e = !!l;
+    openModal(`<button class="close-modal" onclick="closeModal()">✕</button>
+      <h2>${e?'Sửa':'Thêm'} Bài Lý Thuyết (Bilingual)</h2>
+      <div class="form-group"><label>Day Number</label><input type="number" id="ml-day" value="${l?.day_number||1}"></div>
+      <div class="form-group"><label>Topic (Optional)</label><input id="ml-topic" value="${l?.topic||''}"></div>
+      
+      <div style="display:flex; gap:16px;">
+        <div style="flex:1;">
+          <h4 style="margin-bottom:8px;color:#0369a1">🇻🇳 Tiếng Việt</h4>
+          <div class="form-group"><label>Tiêu đề *</label><input id="ml-title-vi" value="${l?.title_vi||''}"></div>
+          <div class="form-group"><label>Nội dung *</label><textarea id="ml-content-vi" rows="6">${l?.content_vi||''}</textarea></div>
+          <div class="form-group"><label>Ví dụ</label><textarea id="ml-examples-vi" rows="3">${l?.examples_vi||''}</textarea></div>
+          <div class="form-group"><label>Tips</label><textarea id="ml-tips-vi" rows="2">${l?.tips_vi||''}</textarea></div>
+        </div>
+        <div style="flex:1;">
+          <h4 style="margin-bottom:8px;color:#be123c">🇬🇧 Tiếng Anh</h4>
+          <div class="form-group"><label>Title (Optional)</label><input id="ml-title-en" value="${l?.title_en||''}"></div>
+          <div class="form-group"><label>Content (Optional)</label><textarea id="ml-content-en" rows="6">${l?.content_en||''}</textarea></div>
+          <div class="form-group"><label>Examples (Optional)</label><textarea id="ml-examples-en" rows="3">${l?.examples_en||''}</textarea></div>
+          <div class="form-group"><label>Tips (Optional)</label><textarea id="ml-tips-en" rows="2">${l?.tips_en||''}</textarea></div>
+        </div>
+      </div>
+      
+      <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="saveLesson(${l?.id||0})">${e?'Cập nhật':'Thêm'}</button></div>`);
+  }
+
+  function saveLesson(id) {
+    const body = {
+      topic:gv('ml-topic'), day_number:parseInt(gv('ml-day'))||1,
+      title_vi:gv('ml-title-vi'), content_vi:gv('ml-content-vi'), examples_vi:gv('ml-examples-vi'), tips_vi:gv('ml-tips-vi'),
+      title_en:gv('ml-title-en'), content_en:gv('ml-content-en'), examples_en:gv('ml-examples-en'), tips_en:gv('ml-tips-en')
+    };
+    if(!body.title_vi||!body.content_vi) { alert('Vui lòng nhập đầy đủ Tiêu đề và Nội dung Tiếng Việt!'); return; }
+    fetch(id?`/api/admin/grammar-lessons/${id}`:'/api/admin/grammar-lessons',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(r=>r.json()).then(()=>{closeModal();loadGrammarLessons();});
+  }
+  function deleteLesson(id) { if(!confirm('Xóa bài lý thuyết?'))return; fetch(`/api/admin/grammar-lessons/${id}`,{method:'DELETE'}).then(()=>loadGrammarLessons()); }
+
+  function loadGrammarExercises() {
+    const area = document.getElementById('grammar-exercises-area');
+    area.innerHTML = '<p class="text-center" style="padding:2rem">Đang tải...</p>';
+    fetch('/api/admin/grammar').then(r=>r.json()).then(exs => {
+      area.innerHTML = `<div style="display:flex;justify-content:flex-end;margin-bottom:1rem"><button class="btn btn-primary" onclick="showAddExerciseModal()"><i class="fa-solid fa-plus"></i> Thêm Câu Hỏi</button></div>`;
+      if(!exs.length) { area.innerHTML += '<div class="empty-state"><p>Chưa có bài tập nào.</p></div>'; return; }
+      exs.forEach((ex,i) => {
+        area.innerHTML += `<div class="admin-item">
+          <div style="min-width:40px;height:40px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;font-weight:800;color:#d97706">${i+1}</div>
+          <div class="item-body"><h4>${ex.question}</h4><p>✅ Đáp án: <strong>${ex.correct_answer}</strong> | Options: ${(ex.options||[]).join(', ')}</p>
+            <div class="item-meta"><span>${ex.grammar_topic||''}</span><span>Day ${ex.day_number}</span></div></div>
+          <div class="item-actions"><button class="btn btn-icon danger" onclick="deleteExercise(${ex.id})"><i class="fa-solid fa-trash"></i></button></div>
+        </div>`;
+      });
+    });
+  }
+
+  function showAddExerciseModal() {
+    openModal(`<button class="close-modal" onclick="closeModal()">✕</button>
+      <h2>Thêm Câu Hỏi Ngữ Pháp</h2>
+      <div class="form-group"><label>Câu hỏi *</label><input id="me-q"></div>
+      <div class="form-group"><label>Đáp án A</label><input id="me-a"></div>
+      <div class="form-group"><label>Đáp án B</label><input id="me-b"></div>
+      <div class="form-group"><label>Đáp án C</label><input id="me-c"></div>
+      <div class="form-group"><label>Đáp án D</label><input id="me-d"></div>
+      <div class="form-group"><label>Đáp án đúng (copy chính xác text)</label><input id="me-correct"></div>
+      <div class="form-group"><label>Giải thích</label><textarea id="me-expl"></textarea></div>
+      <div class="form-group"><label>Grammar Topic</label><input id="me-topic"></div>
+      <div class="form-group"><label>Day Number</label><input type="number" id="me-day" value="1"></div>
+      <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="saveExercise()">Thêm</button></div>`);
+  }
+
+  function saveExercise() {
+    const body = {question:gv('me-q'),options:[gv('me-a'),gv('me-b'),gv('me-c'),gv('me-d')],correct_answer:gv('me-correct'),explanation:gv('me-expl'),grammar_topic:gv('me-topic'),day_number:parseInt(gv('me-day'))||1};
+    fetch('/api/admin/grammar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(r=>r.json()).then(()=>{closeModal();loadGrammarExercises();loadDashboard();});
+  }
+  function deleteExercise(id) { if(!confirm('Xóa câu hỏi?'))return; fetch(`/api/admin/grammar/${id}`,{method:'DELETE'}).then(()=>{loadGrammarExercises();loadDashboard();}); }
+
+  // ==================== READING ====================
+  function loadReading() {
+    const area = document.getElementById('reading-list');
+    area.innerHTML = '<p class="text-center" style="padding:2rem">Đang tải...</p>';
+    fetch('/api/admin/reading').then(r=>r.json()).then(items => {
+      if(!items.length) { area.innerHTML='<div class="empty-state"><p>Chưa có bài đọc.</p></div>'; return; }
+      area.innerHTML = items.map(it => `<div class="admin-item">
+        <div style="min-width:40px;height:40px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;color:#2563eb"><i class="fa-solid fa-book-open-reader"></i></div>
+        <div class="item-body"><h4>${it.title}</h4><p>${(it.content||'').substring(0,200)}...</p>
+          <div class="item-meta"><span>${it.category||''}</span><span>Day ${it.day_number}</span><span>${(it.questions||[]).length} câu hỏi</span></div></div>
+        <div class="item-actions"><button class="btn btn-icon danger" onclick="delItem('reading',${it.id})"><i class="fa-solid fa-trash"></i></button></div>
+      </div>`).join('');
+    });
+  }
+
+  // ==================== LISTENING ====================
+  function loadListening() {
+    const area = document.getElementById('listening-list');
+    area.innerHTML = '<p class="text-center" style="padding:2rem">Đang tải...</p>';
+    fetch('/api/admin/listening').then(r=>r.json()).then(items => {
+      if(!items.length) { area.innerHTML='<div class="empty-state"><p>Chưa có bài nghe.</p></div>'; return; }
+      area.innerHTML = items.map(it => `<div class="admin-item">
+        <div style="min-width:40px;height:40px;border-radius:50%;background:#fce4ec;display:flex;align-items:center;justify-content:center;color:#e11d48"><i class="fa-solid fa-headphones"></i></div>
+        <div class="item-body"><h4>🎧 ${it.title}</h4><p>${(it.dialogue||'').substring(0,200)}...</p>
+          <div class="item-meta"><span>${it.category||''}</span><span>Day ${it.day_number}</span><span>${(it.questions||[]).length} câu hỏi</span></div></div>
+        <div class="item-actions"><button class="btn btn-icon danger" onclick="delItem('listening',${it.id})"><i class="fa-solid fa-trash"></i></button></div>
+      </div>`).join('');
+    });
+  }
+
+  // ==================== SPEAKING ====================
+  function loadSpeaking() {
+    const area = document.getElementById('speaking-list');
+    area.innerHTML = '<p class="text-center" style="padding:2rem">Đang tải...</p>';
+    fetch('/api/admin/speaking').then(r=>r.json()).then(items => {
+      if(!items.length) { area.innerHTML='<div class="empty-state"><p>Chưa có chủ đề nói.</p></div>'; return; }
+      area.innerHTML = items.map(it => `<div class="admin-item">
+        <div style="min-width:40px;height:40px;border-radius:50%;background:#d1fae5;display:flex;align-items:center;justify-content:center;color:#059669"><i class="fa-solid fa-microphone"></i></div>
+        <div class="item-body"><h4>🎤 ${it.prompt}</h4><p>${it.key_phrases||'N/A'}</p>
+          <div class="item-meta"><span>${it.category||''}</span><span>Day ${it.day_number}</span></div></div>
+        <div class="item-actions"><button class="btn btn-icon danger" onclick="delItem('speaking',${it.id})"><i class="fa-solid fa-trash"></i></button></div>
+      </div>`).join('');
+    });
+  }
+
+  // ==================== WRITING ====================
+  function loadWriting() {
+    const area = document.getElementById('writing-list');
+    area.innerHTML = '<p class="text-center" style="padding:2rem">Đang tải...</p>';
+    fetch('/api/admin/writing').then(r=>r.json()).then(items => {
+      if(!items.length) { area.innerHTML='<div class="empty-state"><p>Chưa có đề viết.</p></div>'; return; }
+      area.innerHTML = items.map(it => `<div class="admin-item">
+        <div style="min-width:40px;height:40px;border-radius:50%;background:#fef3c7;display:flex;align-items:center;justify-content:center;color:#d97706"><i class="fa-solid fa-file-pen"></i></div>
+        <div class="item-body"><h4>✍️ ${it.title}</h4><p>${(it.prompt||'').substring(0,200)}...</p>
+          <div class="item-meta"><span>${it.category||''}</span><span>Day ${it.day_number}</span><span>Limit: ${it.word_limit} words</span></div></div>
+        <div class="item-actions"><button class="btn btn-icon danger" onclick="delItem('writing',${it.id})"><i class="fa-solid fa-trash"></i></button></div>
+      </div>`).join('');
+    });
+  }
+
+  // ==================== ROLES ====================
+  function loadRoles() {
+    fetch('/api/admin/users').then(r=>r.json()).then(users => {
+      const admins = users.filter(u=>u.role==='role_admin');
+      const teachers = users.filter(u=>u.role==='role_teacher');
+      const students = users.filter(u=>u.role!=='role_admin'&&u.role!=='role_teacher');
+      document.getElementById('roles-grid').innerHTML = `
+        <div class="role-card admin"><i class="fa-solid fa-crown role-icon"></i><h3>Administrator</h3><p>Full quyền quản trị toàn bộ hệ thống.</p><span>${admins.length} Users</span></div>
+        <div class="role-card teacher"><i class="fa-solid fa-chalkboard-user role-icon"></i><h3>Teacher</h3><p>Tạo bài tập, chấm điểm, upload đề.</p><span>${teachers.length} Users</span></div>
+        <div class="role-card student"><i class="fa-solid fa-user-graduate role-icon"></i><h3>Student</h3><p>Học tập, tracking tiến độ.</p><span>${students.length} Users</span></div>`;
+    });
+  }
+
+  // ==================== GENERIC DELETE ====================
+  function delItem(type, id) {
+    if(!confirm('Xóa mục này?'))return;
+    fetch(`/api/admin/${type}/${id}`,{method:'DELETE'}).then(()=>{loadView(type==='reading'?'exercises':type);loadDashboard();});
+  }
+
+  // ==================== TOPICS ====================
+  function loadTopics() {
+    const area = document.getElementById('topics-list');
+    area.innerHTML = '<p class="text-center" style="padding:2rem">Đang tải...</p>';
+    fetch('/api/admin/topics').then(r=>r.json()).then(topics => {
+      if(!topics.length) { area.innerHTML='<div class="empty-state"><p>Chưa có chủ đề nào.</p></div>'; return; }
+      area.innerHTML = topics.map(t => `<div class="admin-item" style="border-left:4px solid ${t.color||'#4f46e5'}">
+        <div style="min-width:48px;height:48px;border-radius:50%;background:${t.color||'#4f46e5'}20;display:flex;align-items:center;justify-content:center;font-size:24px">${t.icon||'🌍'}</div>
+        <div class="item-body">
+          <h4>${t.icon||'🌍'} ${t.name} <span style="font-size:0.75rem;color:var(--text-muted);font-weight:400">(${t.slug})</span></h4>
+          <p>${t.description||''}</p>
+          <div class="item-meta">
+            <span style="background:${t.color||'#4f46e5'}20;color:${t.color||'#4f46e5'}">👥 ${t.user_count||0} users</span>
+            <span style="background:${t.color||'#4f46e5'}20;color:${t.color||'#4f46e5'}">📚 ${t.vocab_count||0} từ vựng</span>
+            <span>Thứ tự: ${t.sort_order||0}</span>
+          </div>
+        </div>
+        <div class="item-actions">
+          <button class="btn btn-icon" onclick='showAddTopicModal(${JSON.stringify(t).replace(/'/g,"&#39;")})'><i class="fa-solid fa-pen"></i></button>
+          ${t.slug==='general'?'':`<button class="btn btn-icon danger" onclick="deleteTopic(${t.id})"><i class="fa-solid fa-trash"></i></button>`}
+        </div>
+      </div>`).join('');
+    });
+  }
+
+  function showAddTopicModal(t) {
+    const e = !!t;
+    openModal(`<button class="close-modal" onclick="closeModal()">✕</button>
+      <h2>${e?'Sửa':'Thêm'} Chủ Đề</h2>
+      ${!e?'<div class="form-group"><label>Slug (ví dụ: developer, children) *</label><input id="mt-slug" placeholder="developer"></div>':''}
+      <div class="form-group"><label>Tên hiển thị *</label><input id="mt-name" value="${t?.name||''}"></div>
+      <div class="form-group"><label>Icon (emoji)</label><input id="mt-icon" value="${t?.icon||'🌍'}" style="font-size:24px"></div>
+      <div class="form-group"><label>Màu sắc</label><input type="color" id="mt-color" value="${t?.color||'#4f46e5'}" style="height:40px"></div>
+      <div class="form-group"><label>Mô tả</label><input id="mt-desc" value="${t?.description||''}"></div>
+      <div class="form-group"><label>Thứ tự sắp xếp</label><input type="number" id="mt-order" value="${t?.sort_order||0}"></div>
+      <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary" onclick="saveTopic(${t?.id||0})">${e?'Cập nhật':'Thêm'}</button></div>`);
+  }
+
+  function saveTopic(id) {
+    const body = { name:gv('mt-name'), icon:gv('mt-icon'), color:gv('mt-color'), description:gv('mt-desc'), sort_order:parseInt(gv('mt-order'))||0 };
+    if(!body.name) { alert('Vui lòng nhập tên chủ đề!'); return; }
+    if(!id) body.slug = gv('mt-slug');
+    if(!id && !body.slug) { alert('Vui lòng nhập slug!'); return; }
+    fetch(id?`/api/admin/topics/${id}`:'/api/admin/topics',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(r=>r.json()).then(d=>{ if(d.error){alert(d.error);return;} closeModal();loadTopics();loadDashboard(); });
+  }
+
+  function deleteTopic(id) {
+    if(!confirm('Xóa chủ đề này? Tất cả liên kết với user và nội dung sẽ bị mất!'))return;
+    fetch(`/api/admin/topics/${id}`,{method:'DELETE'}).then(r=>r.json()).then(d=>{ if(d.error){alert(d.error);return;} loadTopics();loadDashboard(); });
+  }
+
+  // ==================== VIDEOS ====================
+  function loadVideos() {
+    const area = document.getElementById('video-area');
+    area.innerHTML = '<div style="display:flex;justify-content:center;padding:2rem"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>';
+    fetch('/api/youtube-listening').then(r=>r.json()).then(videos => {
+      area.innerHTML = '';
+      if(!videos.length) { area.innerHTML = '<div class="empty-state"><p>Chưa có video. Nhấn "Import Video" để thêm.</p></div>'; return; }
+      videos.forEach(v => {
+        area.innerHTML += `<div class="admin-item" style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; gap:16px;">
+            <img src="https://img.youtube.com/vi/${v.youtube_id}/mqdefault.jpg" style="width:120px; height:68px; border-radius:8px; object-fit:cover;" />
+            <div class="item-body">
+              <h4 style="margin:0 0 4px 0">${v.title}</h4>
+              <p style="color:#666; font-size:13px; margin:0">${v.category} | ${v.level} | Day ${v.day_number} | Thời lượng: ${v.duration}</p>
+            </div>
+          </div>
+          <div class="item-actions">
+            <button class="btn btn-icon danger" onclick="deleteVideo(${v.id})" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </div>`;
+      });
+    });
+  }
+
+  function showImportVideoModal() {
+    openModal(`<button class="close-modal" onclick="closeModal()">✕</button>
+      <h2>Import Video YouTube</h2>
+      <p style="font-size:13px; color:#666; margin-bottom:12px;">Tool tự động lấy Sub Tiếng Anh và dịch sang Tiếng Việt. Chỉ áp dụng Video có sẵn phụ đề EN, nên độ dài tầm 2-5p để test nhanh!</p>
+      <div class="form-group"><label>YouTube ID hoặc URL *</label><input id="mv-id" placeholder="VD: lCAg8Ybm2us, hoặc https://www.youtube.com/watch?v=..."></div>
+      <div class="form-group"><label>Tiêu đề (Để trống sẽ dùng Title gốc hoặc "Imported Video")</label><input id="mv-title" placeholder="Tùy chọn"></div>
+      <div style="display:flex;gap:12px">
+        <div class="form-group" style="flex:1"><label>Category</label><input id="mv-cat" value="technical code"></div>
+        <div class="form-group" style="flex:1"><label>Level</label><select id="mv-level"><option>beginner</option><option selected>intermediate</option><option>advanced</option></select></div>
+        <div class="form-group" style="width:80px"><label>Day</label><input type="number" id="mv-day" value="1"></div>
+      </div>
+      <div class="modal-actions" style="margin-top:24px">
+        <button class="btn btn-outline" onclick="closeModal()">Hủy</button>
+        <button class="btn btn-primary" onclick="importYTVideo(this)"><i class="fa-solid fa-cloud-arrow-up"></i> Bắt đầu Import</button>
+      </div>`);
+  }
+
+  function importYTVideo(btn) {
+    let vidInput = gv('mv-id');
+    if (!vidInput) { alert('Vui lòng nhập ID hoặc URL YouTube'); return; }
+    
+    let vid = vidInput;
+    if (vid.includes('v=')) vid = new URLSearchParams(vid.split('?')[1]).get('v');
+    else if (vid.includes('youtu.be/')) vid = vid.split('youtu.be/')[1].split('?')[0];
+
+    const body = {
+      videoId: vid,
+      title: gv('mv-title'), category: gv('mv-cat'), level: gv('mv-level'), day_number: parseInt(gv('mv-day'))||1
+    };
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải Transcript & Dịch (10-20s)...';
+    
+    fetch('/api/admin/youtube-import', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})
+      .then(r=>r.json()).then(res => {
+        if(res.error) { alert("Lỗi: " + res.error); btn.disabled=false; btn.innerHTML='Lỗi'; return; }
+        closeModal(); loadVideos();
+      }).catch(e => {
+        alert("Có lỗi xảy ra: " + e.message); btn.disabled=false; btn.innerHTML='Lỗi rôi';
+      });
+  }
+
+  function deleteVideo(id) {
+    if(!confirm('Bạn có chắc muốn xóa video này? Khôi phục lại sẽ phải tải lại Sub!')) return;
+    fetch('/api/admin/youtube-import/' + id, {method:'DELETE'}).then(()=>loadVideos());
+  }
+
+  // ==================== UTIL ====================
+  function setText(id,val) { const el=document.getElementById(id); if(el) el.textContent = typeof val==='number'?val.toLocaleString():(val||'0'); }
+  function gv(id) { return document.getElementById(id)?.value||''; }
+
+  // INIT
+  checkAuth();
+  </script>
+</body>
+</html>

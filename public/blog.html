@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog Tiếng Anh | Mẹo Học, Từ Vựng IT, Phỏng Vấn | Eagle English</title>
+  <meta name="description" content="Blog chia sẻ kinh nghiệm tự học tiếng Anh cho dân IT, developer, tester, người đi làm. Mẹo học nhanh, từ vựng chuyên ngành, phỏng vấn tiếng Anh.">
+  <meta name="keywords" content="blog tiếng anh, mẹo học tiếng anh, tiếng anh cho dev, từ vựng IT, phỏng vấn tiếng anh">
+  <link rel="canonical" href="https://engfordev.top/blog.html" />
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Blog Tiếng Anh Cho Dân IT | Eagle English">
+  <meta property="og:description" content="Mẹo học tiếng Anh, từ vựng IT, lộ trình học cho developer, tester, người đi làm.">
+  <meta property="og:image" content="https://engfordev.top/img/mascot.png">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="icon" href="/img/mascot.png">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #f8fafb; color: #1a1a2e; }
+    
+    /* Nav */
+    .blog-nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 5%; background: white; box-shadow: 0 1px 8px rgba(0,0,0,0.06); position: sticky; top: 0; z-index: 100; }
+    .blog-nav .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #16a34a; font-weight: 900; font-size: 22px; }
+    .blog-nav .logo img { width: 36px; height: 36px; }
+    .blog-nav-links { display: flex; gap: 20px; align-items: center; }
+    .blog-nav-links a { text-decoration: none; color: #555; font-weight: 500; transition: color .2s; }
+    .blog-nav-links a:hover { color: #16a34a; }
+    .btn-cta { background: linear-gradient(135deg, #16a34a, #22c55e); color: white!important; padding: 8px 20px; border-radius: 24px; font-weight: 700; }
+    .btn-cta:hover { opacity: .9; }
+    
+    /* Blog List */
+    .blog-container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+    .blog-header { text-align: center; margin-bottom: 48px; }
+    .blog-header h1 { font-size: 36px; font-weight: 900; color: #16a34a; margin-bottom: 12px; }
+    .blog-header p { font-size: 18px; color: #666; }
+    
+    .post-card { background: white; border-radius: 16px; padding: 28px; margin-bottom: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); transition: transform .2s, box-shadow .2s; cursor: pointer; }
+    .post-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
+    .post-card h2 { font-size: 22px; font-weight: 800; color: #1a1a2e; margin-bottom: 10px; line-height: 1.4; }
+    .post-card h2:hover { color: #16a34a; }
+    .post-meta { display: flex; gap: 16px; align-items: center; font-size: 13px; color: #888; margin-bottom: 12px; flex-wrap: wrap; }
+    .post-meta .badge { background: #e8f5e9; color: #16a34a; padding: 3px 10px; border-radius: 12px; font-weight: 600; font-size: 12px; }
+    .post-desc { color: #555; line-height: 1.6; font-size: 15px; }
+    .post-rating { display: flex; align-items: center; gap: 6px; }
+    .stars { color: #f59e0b; font-size: 14px; }
+    
+    /* Single Post */
+    .post-full { background: white; border-radius: 16px; padding: 40px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .post-full h1 { font-size: 32px; font-weight: 900; color: #1a1a2e; margin-bottom: 16px; line-height: 1.3; }
+    .post-content { line-height: 1.8; font-size: 16px; color: #333; }
+    .post-content h2 { font-size: 24px; font-weight: 800; color: #16a34a; margin: 32px 0 16px; }
+    .post-content h3 { font-size: 20px; font-weight: 700; color: #1a1a2e; margin: 24px 0 12px; }
+    .post-content p { margin-bottom: 16px; }
+    .post-content ul, .post-content ol { margin: 16px 0; padding-left: 24px; }
+    .post-content li { margin-bottom: 8px; }
+    .post-content blockquote { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 16px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; font-style: italic; color: #333; }
+    .post-content table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    .post-content th, .post-content td { border: 1px solid #e5e7eb; padding: 10px 14px; text-align: left; }
+    .post-content th { background: #f0fdf4; color: #16a34a; font-weight: 700; }
+    .post-content a { color: #16a34a; font-weight: 600; }
+    .back-btn { display: inline-flex; align-items: center; gap: 6px; color: #16a34a; font-weight: 600; text-decoration: none; margin-bottom: 24px; }
+    .back-btn:hover { text-decoration: underline; }
+    
+    /* Comments */
+    .comments-section { margin-top: 48px; }
+    .comments-section h3 { font-size: 22px; font-weight: 800; margin-bottom: 24px; }
+    .comment-card { background: #f8fafb; border-radius: 12px; padding: 20px; margin-bottom: 16px; border: 1px solid #e8e8e8; }
+    .comment-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .comment-author { font-weight: 700; color: #1a1a2e; }
+    .comment-date { font-size: 12px; color: #888; }
+    .comment-stars { color: #f59e0b; margin-bottom: 8px; }
+    .comment-text { color: #444; line-height: 1.6; }
+    
+    .comment-form { background: white; border: 2px solid #e8e8e8; border-radius: 16px; padding: 24px; margin-top: 24px; }
+    .comment-form h4 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+    .form-row { margin-bottom: 14px; }
+    .form-row label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 14px; }
+    .form-row input, .form-row textarea { width: 100%; padding: 10px 14px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 15px; font-family: inherit; }
+    .form-row textarea { height: 100px; resize: vertical; }
+    .form-row input:focus, .form-row textarea:focus { border-color: #16a34a; outline: none; }
+    .star-input { display: flex; gap: 4px; font-size: 28px; cursor: pointer; }
+    .star-input span { color: #ddd; transition: color .15s; }
+    .star-input span.active { color: #f59e0b; }
+    .btn-submit { background: linear-gradient(135deg, #16a34a, #22c55e); color: white; border: none; padding: 12px 32px; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer; }
+    .btn-submit:hover { opacity: .9; }
+    
+    .overall-rating { display: flex; align-items: center; gap: 16px; background: #f0fdf4; padding: 20px 24px; border-radius: 16px; margin-bottom: 32px; }
+    .rating-big { font-size: 48px; font-weight: 900; color: #16a34a; }
+    .rating-stars-big { color: #f59e0b; font-size: 24px; }
+    
+    /* Footer */
+    .blog-footer { text-align: center; padding: 40px 20px; color: #888; font-size: 14px; border-top: 1px solid #eee; margin-top: 60px; }
+    .blog-footer a { color: #16a34a; text-decoration: none; font-weight: 600; }
+    
+    /* Dual Lang Rules */
+    body.show-vi .lang-en { display: none !important; }
+    body.show-en .lang-vi { display: none !important; }
+
+    @media (max-width: 600px) {
+      .blog-header h1 { font-size: 28px; }
+      .post-card h2 { font-size: 18px; }
+      .post-full { padding: 20px; }
+      .post-full h1 { font-size: 24px; }
+      .blog-nav-links a:not(.btn-cta) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="blog-nav">
+    <a href="/" class="logo"><img src="/img/mascot.png" alt="Eagle">Eagle English</a>
+    <div class="blog-nav-links">
+      <a href="/">Trang chủ</a>
+      <a href="/blog.html">Blog</a>
+      <a href="/" class="btn-cta">Học Miễn Phí!</a>
+    </div>
+  </nav>
+
+  <div class="blog-container" id="blogApp">
+    <div class="loading" style="text-align:center;padding:60px"><div class="spinner"></div><p style="margin-top:16px;color:#888">Đang tải...</p></div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-glow-left"></div>
+
+    <!-- Stats Strip -->
+    <div class="footer-stats-strip">
+      <div class="footer-stats-inner">
+        <div class="footer-stat">
+          <div class="footer-stat-value">5,000+</div>
+          <div class="footer-stat-label">Từ vựng</div>
+        </div>
+        <div class="footer-stat">
+          <div class="footer-stat-value">100+</div>
+          <div class="footer-stat-label">Bài học</div>
+        </div>
+        <div class="footer-stat">
+          <div class="footer-stat-value">4</div>
+          <div class="footer-stat-label">Kỹ năng</div>
+        </div>
+        <div class="footer-stat">
+          <div class="footer-stat-value">100%</div>
+          <div class="footer-stat-label">Miễn phí</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Footer Content -->
+    <div class="footer-main">
+      <div class="footer-inner">
+        <!-- Brand + Newsletter -->
+        <div class="footer-brand">
+          <div class="footer-brand-header">
+            <img src="/img/mascot.png" alt="Eagle English">
+            <div>
+              <h3>Eagle English</h3>
+              <p class="footer-tagline">Learn Smart — Have Fun! 🦅</p>
+            </div>
+          </div>
+          <p class="footer-desc">Nền tảng tự học tiếng Anh miễn phí tích hợp AI cho mọi người: người đi làm, sinh viên, học sinh & đặc biệt dân IT.</p>
+          <div class="footer-newsletter">
+            <p>📩 Nhận mẹo học tiếng Anh mỗi tuần</p>
+            <form class="newsletter-form" onsubmit="event.preventDefault(); this.querySelector('button').textContent='✅ Đã đăng ký!'; this.querySelector('input').value='';">
+              <input type="email" placeholder="Email của bạn..." required>
+              <button type="submit">Đăng ký</button>
+            </form>
+          </div>
+          <div class="footer-socials">
+            <a href="https://web.facebook.com/eagle.english.pro/" target="_blank" class="footer-social-btn fb" title="Facebook">
+              <svg width="18" height="18" viewBox="0 0 48 48"><path fill="white" d="M48 24C48 10.745 37.255 0 24 0S0 10.745 0 24c0 11.979 8.776 21.908 20.25 23.708v-16.77h-6.094V24h6.094v-5.288c0-6.014 3.583-9.337 9.065-9.337 2.625 0 5.372.469 5.372.469v5.906h-3.026c-2.981 0-3.911 1.85-3.911 3.75V24h6.656l-1.064 6.938H27.75v16.77C39.224 45.908 48 35.979 48 24"/></svg>
+            </a>
+            <a href="mailto:eagle.english.daily@gmail.com" class="footer-social-btn mail" title="Email">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5-8-5h16zm0 12H4V8l8 5 8-5v10z" fill="white"/></svg>
+            </a>
+            <a href="https://engfordev.top" class="footer-social-btn web" title="Website">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" fill="white"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="footer-section">
+          <h4>🔗 Truy cập nhanh</h4>
+          <div class="footer-links">
+            <a href="/" class="footer-link-item"><span class="footer-link-icon">🏠</span> Trang chủ</a>
+            <a href="/blog.html" class="footer-link-item"><span class="footer-link-icon">📝</span> Blog</a>
+            <a href="/" class="footer-link-item"><span class="footer-link-icon">🔐</span> Đăng nhập</a>
+            <a href="/" class="footer-link-item"><span class="footer-link-icon">🚀</span> Đăng ký miễn phí</a>
+          </div>
+        </div>
+
+        <!-- Features -->
+        <div class="footer-section">
+          <h4>✨ Tính năng</h4>
+          <div class="footer-links">
+            <div class="footer-link-item"><span class="footer-link-icon">📚</span> Vocabulary & Flashcards</div>
+            <div class="footer-link-item"><span class="footer-link-icon">🎧</span> Listening & Speaking</div>
+            <div class="footer-link-item"><span class="footer-link-icon">🤖</span> AI Pronunciation</div>
+            <div class="footer-link-item"><span class="footer-link-icon">📺</span> Video Learning</div>
+            <div class="footer-link-item"><span class="footer-link-icon">💼</span> Interview Prep</div>
+            <div class="footer-link-item"><span class="footer-link-icon">🏢</span> Company Reviews</div>
+          </div>
+        </div>
+
+        <!-- Contact -->
+        <div class="footer-section">
+          <h4>📬 Liên hệ</h4>
+          <a href="mailto:eagle.english.daily@gmail.com" class="footer-contact-item">
+            <span class="footer-contact-icon">📧</span>
+            eagle.english.daily@gmail.com
+          </a>
+          <a href="https://web.facebook.com/eagle.english.pro/" target="_blank" class="footer-contact-item">
+            <span class="footer-contact-icon">
+              <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#1877F2" d="M48 24C48 10.745 37.255 0 24 0S0 10.745 0 24c0 11.979 8.776 21.908 20.25 23.708v-16.77h-6.094V24h6.094v-5.288c0-6.014 3.583-9.337 9.065-9.337 2.625 0 5.372.469 5.372.469v5.906h-3.026c-2.981 0-3.911 1.85-3.911 3.75V24h6.656l-1.064 6.938H27.75v16.77C39.224 45.908 48 35.979 48 24"/></svg>
+            </span>
+            Eagle English Daily
+          </a>
+          <a href="https://engfordev.top" class="footer-contact-item">
+            <span class="footer-contact-icon">🌐</span>
+            engfordev.top
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Co-founder Banner -->
+    <div class="footer-founder-banner">
+      <div class="founder-banner-inner">
+        <div class="founder-emoji">🤝</div>
+        <div class="founder-content">
+          <h4>🚀 Tìm Kiếm Co-founder!</h4>
+          <p>Chúng tôi đang tìm kiếm những co-founder nhiệt huyết để đồng hành cùng sứ mệnh: Giúp mọi người Việt Nam học tiếng Anh miễn phí & hiệu quả. Nếu bạn là developer, designer, marketer, hoặc giáo viên Anh ngữ — hãy cùng nhau xây dựng điều tuyệt vời!</p>
+        </div>
+        <a href="mailto:eagle.english.daily@gmail.com" class="founder-cta">📩 Liên Hệ Ngay</a>
+      </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="footer-bottom">
+      <div class="footer-bottom-inner">
+        <p class="footer-copyright">© 2026 Eagle English. Made with ❤️ in Vietnam 🇻🇳</p>
+        <div class="footer-bottom-links">
+          <a href="#">Chính sách bảo mật</a>
+          <a href="#">Điều khoản sử dụng</a>
+          <a href="/blog.html">Blog</a>
+        </div>
+        <div class="footer-bottom-socials">
+          <a href="https://web.facebook.com/eagle.english.pro/" target="_blank" class="footer-social-btn fb" title="Facebook">
+            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="white" d="M48 24C48 10.745 37.255 0 24 0S0 10.745 0 24c0 11.979 8.776 21.908 20.25 23.708v-16.77h-6.094V24h6.094v-5.288c0-6.014 3.583-9.337 9.065-9.337 2.625 0 5.372.469 5.372.469v5.906h-3.026c-2.981 0-3.911 1.85-3.911 3.75V24h6.656l-1.064 6.938H27.75v16.77C39.224 45.908 48 35.979 48 24"/></svg>
+          </a>
+          <a href="mailto:eagle.english.daily@gmail.com" class="footer-social-btn mail" title="Email">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5-8-5h16zm0 12H4V8l8 5 8-5v10z" fill="white"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const blogApp = document.getElementById('blogApp');
+
+    function getSlugFromHash() { return location.hash.replace('#', ''); }
+
+    async function init() {
+      const slug = getSlugFromHash();
+      if (slug) await loadPost(slug);
+      else await loadList();
+    }
+
+    async function loadList() {
+      try {
+        const res = await fetch('/api/blog');
+        const posts = await res.json();
+        blogApp.innerHTML = `
+          <div class="blog-header">
+            <h1>📝 Blog Eagle English</h1>
+            <p>Chia sẻ kinh nghiệm tự học tiếng Anh cho dân IT, developer, người đi làm, sinh viên & trẻ em</p>
+          </div>
+          ${posts.map(p => `
+            <div class="post-card" onclick="location.hash='${p.slug}'">
+              <h2>${p.title}</h2>
+              <div class="post-meta">
+                <span class="badge">${categoryLabel(p.category)}</span>
+                <span>✍️ ${p.author}</span>
+                <span>👁️ ${p.view_count} lượt xem</span>
+                <span>📅 ${new Date(p.created_at).toLocaleDateString('vi-VN')}</span>
+                <div class="post-rating">
+                  <span class="stars">${renderStars(p.avg_rating)}</span>
+                  <span>${p.avg_rating} (${p.comment_count} đánh giá)</span>
+                </div>
+              </div>
+              <p class="post-desc">${p.meta_description}</p>
+            </div>
+          `).join('')}
+        `;
+      } catch(e) { blogApp.innerHTML = '<p>Lỗi tải bài viết</p>'; }
+    }
+
+    async function loadPost(slug) {
+      try {
+        const res = await fetch('/api/blog/' + slug);
+        if (!res.ok) { loadList(); return; }
+        const post = await res.json();
+        
+        document.title = post.title + ' | Eagle English Blog';
+        const metaDesc = document.querySelector('meta[name="description"]');
+        if (metaDesc) metaDesc.content = post.meta_description;
+
+        blogApp.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 24px;">
+            <a href="/blog.html" class="back-btn" onclick="event.preventDefault();location.hash='';loadList()" style="margin:0;" id="i18n-back">← Quay lại danh sách</a>
+            <div class="blog-lang-switcher" style="display:inline-flex; background:#f0f0f0; border-radius:8px; padding:4px;">
+              <button id="btn-lang-en" onclick="setBlogLang('en')" style="padding:6px 12px; border:none; background:transparent; font-weight:600; cursor:pointer; color:#666; border-radius:4px;">🇬🇧 EN</button>
+              <button id="btn-lang-vi" onclick="setBlogLang('vi')" style="padding:6px 12px; border:none; background:white; border-radius:4px; font-weight:600; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,0.1);">🇻🇳 VI</button>
+            </div>
+          </div>
+          <article class="post-full">
+            <h1>${post.title}</h1>
+            <div class="post-meta" style="margin-bottom:24px">
+              <span class="badge">${categoryLabel(post.category)}</span>
+              <span>✍️ ${post.author}</span>
+              <span>👁️ ${post.view_count} <span id="i18n-views">lượt xem</span></span>
+              <span>📅 ${new Date(post.created_at).toLocaleDateString('vi-VN')}</span>
+            </div>
+            <div class="overall-rating">
+              <span class="rating-big">${post.avg_rating}</span>
+              <div>
+                <div class="rating-stars-big">${renderStars(post.avg_rating)}</div>
+                <span style="color:#666;font-size:14px">${post.comment_count} <span id="i18n-reviews">đánh giá</span></span>
+              </div>
+            </div>
+            <div class="post-content">${post.content}</div>
+          </article>
+
+          <div class="comments-section">
+            <h3 id="i18n-comments">💬 Bình luận & Đánh giá (${post.comments.length})</h3>
+            ${post.comments.map(c => `
+              <div class="comment-card">
+                <div class="comment-header">
+                  <span class="comment-author">👤 ${c.author_name}</span>
+                  <span class="comment-date">${new Date(c.created_at).toLocaleDateString('vi-VN')}</span>
+                </div>
+                <div class="comment-stars">${renderStars(c.rating)}</div>
+                <p class="comment-text">${c.content}</p>
+              </div>
+            `).join('')}
+
+            <div class="comment-form">
+              <h4 id="i18n-leave">✍️ Để lại đánh giá của bạn</h4>
+              <div class="form-row">
+                <label id="i18n-name">Tên hiển thị</label>
+                <input type="text" id="cmtName" placeholder="Nhập tên của bạn">
+              </div>
+              <div class="form-row">
+                <label id="i18n-rating">Đánh giá ⭐</label>
+                <div class="star-input" id="starInput">
+                  <span class="active" data-v="1" onclick="setRating(1)">★</span>
+                  <span class="active" data-v="2" onclick="setRating(2)">★</span>
+                  <span class="active" data-v="3" onclick="setRating(3)">★</span>
+                  <span class="active" data-v="4" onclick="setRating(4)">★</span>
+                  <span class="active" data-v="5" onclick="setRating(5)">★</span>
+                </div>
+              </div>
+              <div class="form-row">
+                <label id="i18n-cmt">Bình luận</label>
+                <textarea id="cmtContent" placeholder="Chia sẻ trải nghiệm của bạn..."></textarea>
+              </div>
+              <button class="btn-submit" id="i18n-submit" onclick="submitComment('${slug}')">Gửi đánh giá</button>
+            </div>
+          </div>
+        `;
+        
+        // Show only language switcher for dual lang posts
+        if(post.content.includes('class="lang-')) {
+          setBlogLang('vi'); // Default
+        } else {
+          document.querySelector('.blog-lang-switcher').style.display = 'none';
+        }
+      } catch(e) { blogApp.innerHTML = '<p>Lỗi tải bài viết</p>'; }
+    }
+
+    const dict = {
+      vi: { back: '← Quay lại danh sách', views: 'lượt xem', reviews: 'đánh giá', leave: '✍️ Để lại đánh giá của bạn', name: 'Tên hiển thị', nameP: 'Nhập tên của bạn', rating: 'Đánh giá ⭐', cmt: 'Bình luận', cmtP: 'Chia sẻ trải nghiệm của bạn...', submit: 'Gửi đánh giá', commentsPrefix: '💬 Bình luận & Đánh giá' },
+      en: { back: '← Back to list', views: 'views', reviews: 'reviews', leave: '✍️ Leave a review', name: 'Display name', nameP: 'Enter your name', rating: 'Rating ⭐', cmt: 'Comment', cmtP: 'Share your experience...', submit: 'Submit review', commentsPrefix: '💬 Comments & Reviews' }
+    };
+    function setRating(v) {
+      currentRating = v;
+      document.querySelectorAll('#starInput span').forEach(s => {
+        s.classList.toggle('active', parseInt(s.dataset.v) <= v);
+      });
+    }
+
+    async function submitComment(slug) {
+      const name = document.getElementById('cmtName').value.trim();
+      const content = document.getElementById('cmtContent').value.trim();
+      if (!name || !content) { alert('Vui lòng nhập tên và nội dung!'); return; }
+      try {
+        await fetch('/api/blog/' + slug + '/comments', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ author_name: name, content, rating: currentRating })
+        });
+        alert('Đánh giá đã được gửi! Cảm ơn bạn! 🎉');
+        loadPost(slug);
+      } catch(e) { alert('Lỗi gửi đánh giá'); }
+    }
+
+    function renderStars(rating) {
+      const full = Math.round(parseFloat(rating));
+      return '★'.repeat(full) + '☆'.repeat(5 - full);
+    }
+
+    function categoryLabel(cat) {
+      const labels = { 'learning-tips': '📚 Mẹo Học', 'vocabulary': '📖 Từ Vựng', 'business-english': '💼 Business', 'resources': '🔗 Tài Liệu', 'feature': '🚀 Tính Năng', 'review': '⭐ Review', 'kids': '👶 Trẻ Em', 'general': '🌍 Tổng Hợp', 'features': '✨ Tính Năng Mới' };
+      return labels[cat] || '📝 ' + cat;
+    }
+
+    function setBlogLang(l) {
+      document.body.className = 'show-' + l;
+      const bEn = document.getElementById('btn-lang-en');
+      const bVi = document.getElementById('btn-lang-vi');
+      if (bEn && bVi) {
+        if (l === 'en') {
+          bEn.style.background = 'white'; bEn.style.color = '#1a1a2e'; bEn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+          bVi.style.background = 'transparent'; bVi.style.color = '#666'; bVi.style.boxShadow = 'none';
+        } else {
+          bVi.style.background = 'white'; bVi.style.color = '#1a1a2e'; bVi.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+          bEn.style.background = 'transparent'; bEn.style.color = '#666'; bEn.style.boxShadow = 'none';
+        }
+      }
+      
+      // Update i18n if elements exist
+      const q = (id) => document.getElementById(id);
+      if(q('i18n-back')) q('i18n-back').innerText = dict[l].back;
+      if(q('i18n-views')) q('i18n-views').innerText = dict[l].views;
+      if(q('i18n-reviews')) q('i18n-reviews').innerText = dict[l].reviews;
+      if(q('i18n-leave')) q('i18n-leave').innerText = dict[l].leave;
+      if(q('i18n-name')) q('i18n-name').innerText = dict[l].name;
+      if(q('cmtName')) q('cmtName').placeholder = dict[l].nameP;
+      if(q('i18n-rating')) q('i18n-rating').innerText = dict[l].rating;
+      if(q('i18n-cmt')) q('i18n-cmt').innerText = dict[l].cmt;
+      if(q('cmtContent')) q('cmtContent').placeholder = dict[l].cmtP;
+      if(q('i18n-submit')) q('i18n-submit').innerText = dict[l].submit;
+      
+      const cmtHeader = q('i18n-comments');
+      if (cmtHeader) {
+        const count = cmtHeader.innerText.match(/\d+/);
+        cmtHeader.innerText = dict[l].commentsPrefix + ' (' + (count ? count[0] : 0) + ')';
+      }
+    }
+
+    window.addEventListener('hashchange', init);
+    init();
+  </script>
+
+  <!-- JSON-LD for blog page -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "name": "Eagle English Blog",
+    "url": "https://engfordev.top/blog.html",
+    "description": "Blog chia sẻ kinh nghiệm tự học tiếng Anh cho dân IT, developer, người đi làm",
+    "publisher": { "@type": "Organization", "name": "Eagle English", "url": "https://engfordev.top" }
+  }
+  </script>
+</body>
+</html>
