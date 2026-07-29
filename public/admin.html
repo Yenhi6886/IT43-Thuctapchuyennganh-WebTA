@@ -100,20 +100,68 @@
       <div class="view-container">
         <!-- DASHBOARD -->
         <section class="view active" id="view-dashboard">
-          <div class="page-header"><h1>Tổng Quan Hệ Thống</h1><p>Thống kê dữ liệu thực từ MySQL database.</p></div>
+          <div class="page-header"><h1>Tổng Quan Hệ Thống</h1><p>Thống kê tổng + chi tiết từng mục từ MySQL.</p></div>
           <div class="stats-grid">
-            <div class="stat-card"><div class="stat-icon users"><i class="fa-solid fa-users"></i></div><div class="stat-details"><h3>Tổng Users</h3><h2 id="stat-users">...</h2><p class="trend positive">users table</p></div></div>
-            <div class="stat-card"><div class="stat-icon vocab"><i class="fa-solid fa-book"></i></div><div class="stat-details"><h3>Tổng Từ Vựng</h3><h2 id="stat-vocab">...</h2><p class="trend positive">vocabulary table</p></div></div>
-            <div class="stat-card"><div class="stat-icon visits"><i class="fa-solid fa-eye"></i></div><div class="stat-details"><h3>Check-in</h3><h2 id="stat-visits">...</h2><p class="trend mixed">user_checkins</p></div></div>
-            <div class="stat-card"><div class="stat-icon tasks"><i class="fa-solid fa-list-check"></i></div><div class="stat-details"><h3>Bài Đã Làm</h3><h2 id="stat-tests">...</h2><p class="trend mixed">user_progress</p></div></div>
+            <div class="stat-card clickable" onclick="goView('users')"><div class="stat-icon users"><i class="fa-solid fa-users"></i></div><div class="stat-details"><h3>Tổng Users</h3><h2 id="stat-users">...</h2><p class="trend positive" id="stat-users-sub">—</p></div></div>
+            <div class="stat-card clickable" onclick="goView('vocabulary')"><div class="stat-icon vocab"><i class="fa-solid fa-book"></i></div><div class="stat-details"><h3>Tổng Từ Vựng</h3><h2 id="stat-vocab">...</h2><p class="trend positive" id="stat-vocab-sub">—</p></div></div>
+            <div class="stat-card clickable" onclick="goView('users')"><div class="stat-icon visits"><i class="fa-solid fa-eye"></i></div><div class="stat-details"><h3>Check-in</h3><h2 id="stat-visits">...</h2><p class="trend mixed">user_checkins</p></div></div>
+            <div class="stat-card"><div class="stat-icon tasks"><i class="fa-solid fa-list-check"></i></div><div class="stat-details"><h3>Bài Đã Làm</h3><h2 id="stat-tests">...</h2><p class="trend mixed" id="stat-tests-sub">user_progress</p></div></div>
           </div>
           <div class="stats-grid">
-            <div class="stat-card"><div class="stat-icon" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-pen-to-square"></i></div><div class="stat-details"><h3>Grammar Ex.</h3><h2 id="stat-grammar">...</h2></div></div>
-            <div class="stat-card"><div class="stat-icon" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-book-open-reader"></i></div><div class="stat-details"><h3>Reading</h3><h2 id="stat-reading">...</h2></div></div>
-            <div class="stat-card"><div class="stat-icon" style="background:#fce4ec;color:#e11d48"><i class="fa-solid fa-headphones"></i></div><div class="stat-details"><h3>Listening</h3><h2 id="stat-listening">...</h2></div></div>
-            <div class="stat-card"><div class="stat-icon" style="background:#d1fae5;color:#059669"><i class="fa-solid fa-microphone"></i></div><div class="stat-details"><h3>Speaking</h3><h2 id="stat-speaking">...</h2></div></div>
-            <div class="stat-card"><div class="stat-icon" style="background:#ede9fe;color:#7c3aed"><i class="fa-solid fa-tags"></i></div><div class="stat-details"><h3>Chủ Đề</h3><h2 id="stat-topics">...</h2></div></div>
-            <div class="stat-card"><div class="stat-icon" style="background:#ffedd5;color:#f97316"><i class="fa-solid fa-video"></i></div><div class="stat-details"><h3>Video</h3><h2 id="stat-videos">...</h2></div></div>
+            <div class="stat-card clickable" onclick="goView('grammar')"><div class="stat-icon" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-pen-to-square"></i></div><div class="stat-details"><h3>Grammar Ex.</h3><h2 id="stat-grammar">...</h2></div></div>
+            <div class="stat-card clickable" onclick="goView('exercises')"><div class="stat-icon" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-book-open-reader"></i></div><div class="stat-details"><h3>Reading</h3><h2 id="stat-reading">...</h2></div></div>
+            <div class="stat-card clickable" onclick="goView('listening')"><div class="stat-icon" style="background:#fce4ec;color:#e11d48"><i class="fa-solid fa-headphones"></i></div><div class="stat-details"><h3>Listening</h3><h2 id="stat-listening">...</h2></div></div>
+            <div class="stat-card clickable" onclick="goView('speaking')"><div class="stat-icon" style="background:#d1fae5;color:#059669"><i class="fa-solid fa-microphone"></i></div><div class="stat-details"><h3>Speaking</h3><h2 id="stat-speaking">...</h2></div></div>
+            <div class="stat-card clickable" onclick="goView('writing')"><div class="stat-icon" style="background:#fce7f3;color:#db2777"><i class="fa-solid fa-file-pen"></i></div><div class="stat-details"><h3>Writing</h3><h2 id="stat-writing">...</h2></div></div>
+            <div class="stat-card clickable" onclick="goView('topics')"><div class="stat-icon" style="background:#ede9fe;color:#7c3aed"><i class="fa-solid fa-tags"></i></div><div class="stat-details"><h3>Chủ Đề</h3><h2 id="stat-topics">...</h2></div></div>
+            <div class="stat-card clickable" onclick="goView('videos')"><div class="stat-icon" style="background:#ffedd5;color:#f97316"><i class="fa-solid fa-video"></i></div><div class="stat-details"><h3>Video</h3><h2 id="stat-videos">...</h2></div></div>
+          </div>
+
+          <div class="dash-detail-grid">
+            <div class="chart-box">
+              <h3><i class="fa-solid fa-calendar-check"></i> Check-in 7 ngày gần nhất</h3>
+              <div class="mock-chart bar-chart" id="dash-checkin-chart"></div>
+            </div>
+            <div class="chart-box">
+              <h3><i class="fa-solid fa-chart-pie"></i> Bài làm theo loại</h3>
+              <div id="dash-progress-types" class="dash-list"></div>
+            </div>
+          </div>
+
+          <div class="dash-detail-grid mt-4">
+            <div class="chart-box">
+              <h3><i class="fa-solid fa-book"></i> Từ vựng theo danh mục</h3>
+              <div id="dash-vocab-cats" class="dash-bars"></div>
+            </div>
+            <div class="chart-box">
+              <h3><i class="fa-solid fa-layer-group"></i> User theo trình độ</h3>
+              <div id="dash-levels" class="dash-list"></div>
+            </div>
+          </div>
+
+          <div class="dash-detail-grid mt-4">
+            <div class="chart-box">
+              <div class="flex-between" style="margin-bottom:1rem"><h3 style="margin:0"><i class="fa-solid fa-user-clock"></i> Người dùng gần đây</h3><button class="btn btn-outline" onclick="goView('users')" style="font-size:0.8rem">Xem tất cả</button></div>
+              <div class="table-container" style="border:none;box-shadow:none">
+                <table class="data-table"><thead><tr><th>Tên</th><th>Role</th><th>Level</th><th>Streak</th><th>Học gần nhất</th></tr></thead>
+                <tbody id="dash-recent-users"></tbody></table>
+              </div>
+            </div>
+            <div class="chart-box">
+              <h3><i class="fa-solid fa-bolt"></i> Hoạt động học gần đây</h3>
+              <div id="dash-recent-activity" class="dash-list"></div>
+            </div>
+          </div>
+
+          <div class="dash-detail-grid mt-4">
+            <div class="chart-box">
+              <div class="flex-between" style="margin-bottom:1rem"><h3 style="margin:0"><i class="fa-solid fa-tags"></i> Chủ đề</h3><button class="btn btn-outline" onclick="goView('topics')" style="font-size:0.8rem">Quản lý</button></div>
+              <div id="dash-topics" class="dash-list"></div>
+            </div>
+            <div class="chart-box">
+              <div class="flex-between" style="margin-bottom:1rem"><h3 style="margin:0"><i class="fa-solid fa-video"></i> Video mới</h3><button class="btn btn-outline" onclick="goView('videos')" style="font-size:0.8rem">Quản lý</button></div>
+              <div id="dash-videos" class="dash-list"></div>
+            </div>
           </div>
         </section>
 
@@ -253,6 +301,11 @@
   }
 
   // ==================== NAVIGATION ====================
+  function goView(view) {
+    const link = document.querySelector(`.nav-links li[data-view="${view}"]`);
+    if (link) link.click();
+  }
+
   function initNav() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
@@ -301,9 +354,98 @@
       setText('stat-reading', d.totalReading);
       setText('stat-listening', d.totalListening);
       setText('stat-speaking', d.totalSpeaking);
+      setText('stat-writing', d.totalWriting || 0);
       setText('stat-topics', d.totalTopics || 0);
       setText('stat-videos', d.totalVideos || 0);
+
+      const ur = d.usersByRole || {};
+      setText('stat-users-sub', `${ur.admins || 0} admin · ${ur.users || 0} người dùng`);
+      setText('stat-vocab-sub', `${d.vocabLearned || 0} đã học bởi user`);
+      const typeCount = (d.progressByType || []).length;
+      setText('stat-tests-sub', typeCount ? `${typeCount} loại bài` : 'user_progress');
+
+      // Check-in chart
+      const checks = d.weeklyCheckins || [];
+      const maxC = Math.max(1, ...checks.map(c => Number(c.count) || 0));
+      const chart = document.getElementById('dash-checkin-chart');
+      if (!checks.length) {
+        chart.innerHTML = '<p class="text-muted" style="align-self:center">Chưa có check-in.</p>';
+      } else {
+        chart.innerHTML = checks.map(c => {
+          const h = Math.max(8, Math.round((Number(c.count) / maxC) * 160));
+          const label = String(c.checkin_date).slice(5); // MM-DD
+          return `<div class="bar" style="height:${h}px" title="${c.count} check-in"><span>${label}</span></div>`;
+        }).join('');
+      }
+
+      // Progress by type
+      const progEl = document.getElementById('dash-progress-types');
+      const progs = d.progressByType || [];
+      progEl.innerHTML = progs.length ? progs.map(p => `
+        <div class="dash-row">
+          <span class="dash-label">${esc(p.activity_type)}</span>
+          <span class="dash-meta">${p.count} bài · TB ${p.avg_score ?? '—'}</span>
+        </div>`).join('') : '<p class="text-muted">Chưa có bài làm.</p>';
+
+      // Vocab by category
+      const cats = d.vocabByCategory || [];
+      const maxV = Math.max(1, ...cats.map(c => Number(c.count) || 0));
+      document.getElementById('dash-vocab-cats').innerHTML = cats.length ? cats.map(c => `
+        <div class="dash-bar-row">
+          <span class="dash-label">${esc(c.category)}</span>
+          <div class="dash-bar-track"><div class="dash-bar-fill" style="width:${Math.round(Number(c.count)/maxV*100)}%"></div></div>
+          <span class="dash-meta">${c.count}</span>
+        </div>`).join('') : '<p class="text-muted">Chưa có từ vựng.</p>';
+
+      // Levels
+      const levels = d.levelBreakdown || [];
+      document.getElementById('dash-levels').innerHTML = levels.length ? levels.map(l => `
+        <div class="dash-row">
+          <span class="dash-label">${esc(l.level)}</span>
+          <span class="dash-meta">${l.count} users</span>
+        </div>`).join('') : '<p class="text-muted">—</p>';
+
+      // Recent users
+      const ru = d.recentUsers || [];
+      document.getElementById('dash-recent-users').innerHTML = ru.length ? ru.map(u => {
+        const isAdmin = u.role === 'role_admin';
+        return `<tr>
+          <td><strong>${esc(u.display_name || u.username)}</strong><div class="text-muted" style="font-size:0.75rem">@${esc(u.username)}</div></td>
+          <td style="color:${isAdmin?'#f59e0b':'#10b981'};font-weight:600">${isAdmin?'Admin':'Người dùng'}</td>
+          <td>${esc(u.english_level || '—')}</td>
+          <td>🔥 ${u.streak_days || 0}</td>
+          <td class="text-muted">${u.last_study_date ? String(u.last_study_date).slice(0,10) : '—'}</td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="5" class="text-center">Chưa có user.</td></tr>';
+
+      // Recent activity
+      const acts = d.recentActivity || [];
+      document.getElementById('dash-recent-activity').innerHTML = acts.length ? acts.map(a => `
+        <div class="dash-row">
+          <span class="dash-label">${esc(a.display_name || a.username || 'User')} · <em>${esc(a.activity_type)}</em></span>
+          <span class="dash-meta">${a.score != null ? a.score + ' điểm' : '—'}</span>
+        </div>`).join('') : '<p class="text-muted">Chưa có hoạt động.</p>';
+
+      // Topics
+      const topics = d.topicsDetail || [];
+      document.getElementById('dash-topics').innerHTML = topics.length ? topics.map(t => `
+        <div class="dash-row">
+          <span class="dash-label">${t.icon || '🏷'} ${esc(t.name)}</span>
+          <span class="dash-meta">${t.user_count || 0} users · ${t.vocab_count || 0} từ</span>
+        </div>`).join('') : '<p class="text-muted">Chưa có chủ đề.</p>';
+
+      // Videos
+      const vids = d.recentVideos || [];
+      document.getElementById('dash-videos').innerHTML = vids.length ? vids.map(v => `
+        <div class="dash-row">
+          <span class="dash-label">${esc(v.title || v.youtube_id)}</span>
+          <span class="dash-meta">${v.duration || ''}</span>
+        </div>`).join('') : '<p class="text-muted">Chưa có video.</p>';
     }).catch(e => console.error(e));
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   // ==================== USERS ====================

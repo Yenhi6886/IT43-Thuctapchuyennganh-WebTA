@@ -752,6 +752,28 @@ app.get('/api/admin/dashboard', async (req, res) => {
     const videosResult = await query('SELECT COUNT(*) as total FROM youtube_listening');
     const checkinsByDay = await query('SELECT checkin_date, COUNT(*) as count FROM user_checkins GROUP BY checkin_date ORDER BY checkin_date DESC LIMIT 7');
 
+    const usersByRole = await query(`SELECT
+      SUM(CASE WHEN role = 'role_admin' THEN 1 ELSE 0 END) as admins,
+      SUM(CASE WHEN role != 'role_admin' OR role IS NULL THEN 1 ELSE 0 END) as users
+      FROM users`);
+    const recentUsers = await query(`SELECT id, username, display_name, english_level, role, streak_days, last_study_date
+      FROM users ORDER BY COALESCE(last_study_date, '1970-01-01') DESC, streak_days DESC LIMIT 8`);
+    const vocabByCategory = await query(`SELECT COALESCE(NULLIF(category,''), 'Khác') as category, COUNT(*) as count
+      FROM vocabulary GROUP BY COALESCE(NULLIF(category,''), 'Khác') ORDER BY count DESC LIMIT 10`);
+    const progressByType = await query(`SELECT activity_type, COUNT(*) as count, ROUND(AVG(score), 1) as avg_score
+      FROM user_progress GROUP BY activity_type ORDER BY count DESC`);
+    const recentActivity = await query(`SELECT up.activity_type, up.score, up.completed, u.display_name, u.username
+      FROM user_progress up
+      LEFT JOIN users u ON u.id = up.user_id
+      ORDER BY up.id DESC LIMIT 10`);
+    const topicsDetail = await query(`SELECT t.name, t.icon, t.color,
+      (SELECT COUNT(*) FROM user_topics WHERE topic_id = t.id) as user_count,
+      (SELECT COUNT(*) FROM vocabulary_topics WHERE topic_id = t.id) as vocab_count
+      FROM topics t ORDER BY t.sort_order, t.name LIMIT 12`);
+    const recentVideos = await query(`SELECT id, title, youtube_id, duration FROM youtube_listening ORDER BY id DESC LIMIT 5`);
+    const levelBreakdown = await query(`SELECT COALESCE(NULLIF(english_level,''), 'Chưa chọn') as level, COUNT(*) as count
+      FROM users GROUP BY COALESCE(NULLIF(english_level,''), 'Chưa chọn') ORDER BY count DESC`);
+
     res.json({
       totalUsers: usersResult[0].total,
       totalVocab: vocabResult[0].total,
@@ -765,7 +787,18 @@ app.get('/api/admin/dashboard', async (req, res) => {
       totalWriting: writingResult[0].total,
       totalTopics: topicsResult[0].total,
       totalVideos: videosResult[0].total,
-      weeklyCheckins: checkinsByDay
+      weeklyCheckins: checkinsByDay.reverse(),
+      usersByRole: {
+        admins: Number(usersByRole[0]?.admins || 0),
+        users: Number(usersByRole[0]?.users || 0)
+      },
+      recentUsers,
+      vocabByCategory,
+      progressByType,
+      recentActivity,
+      topicsDetail,
+      recentVideos,
+      levelBreakdown
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
