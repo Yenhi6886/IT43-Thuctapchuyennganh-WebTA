@@ -73,11 +73,13 @@
         <li data-view="grammar"><i class="fa-solid fa-graduation-cap"></i> Ngữ Pháp & Lý Thuyết</li>
         <li data-view="exercises"><i class="fa-solid fa-pen-to-square"></i> Bài Đọc (Reading)</li>
         <li data-view="listening"><i class="fa-solid fa-headphones"></i> Listening</li>
+        <!-- HIDDEN (out of scope): Speaking / Writing / Video / Topics / Roles
         <li data-view="speaking"><i class="fa-solid fa-microphone-lines"></i> Speaking</li>
         <li data-view="writing"><i class="fa-solid fa-file-pen"></i> Writing</li>
         <li data-view="videos"><i class="fa-solid fa-video"></i> Video (StudyPhim)</li>
         <li data-view="topics"><i class="fa-solid fa-tags"></i> Chủ Đề</li>
         <li data-view="roles"><i class="fa-solid fa-user-shield"></i> Phân Quyền</li>
+        -->
         <li class="logout" onclick="adminLogout()"><i class="fa-solid fa-right-from-bracket"></i> Đăng Xuất</li>
       </ul>
     </aside>
@@ -111,10 +113,12 @@
             <div class="stat-card clickable" onclick="goView('grammar')"><div class="stat-icon" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-pen-to-square"></i></div><div class="stat-details"><h3>Grammar Ex.</h3><h2 id="stat-grammar">...</h2></div></div>
             <div class="stat-card clickable" onclick="goView('exercises')"><div class="stat-icon" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-book-open-reader"></i></div><div class="stat-details"><h3>Reading</h3><h2 id="stat-reading">...</h2></div></div>
             <div class="stat-card clickable" onclick="goView('listening')"><div class="stat-icon" style="background:#fce4ec;color:#e11d48"><i class="fa-solid fa-headphones"></i></div><div class="stat-details"><h3>Listening</h3><h2 id="stat-listening">...</h2></div></div>
-            <div class="stat-card clickable" onclick="goView('speaking')"><div class="stat-icon" style="background:#d1fae5;color:#059669"><i class="fa-solid fa-microphone"></i></div><div class="stat-details"><h3>Speaking</h3><h2 id="stat-speaking">...</h2></div></div>
-            <div class="stat-card clickable" onclick="goView('writing')"><div class="stat-icon" style="background:#fce7f3;color:#db2777"><i class="fa-solid fa-file-pen"></i></div><div class="stat-details"><h3>Writing</h3><h2 id="stat-writing">...</h2></div></div>
-            <div class="stat-card clickable" onclick="goView('topics')"><div class="stat-icon" style="background:#ede9fe;color:#7c3aed"><i class="fa-solid fa-tags"></i></div><div class="stat-details"><h3>Chủ Đề</h3><h2 id="stat-topics">...</h2></div></div>
-            <div class="stat-card clickable" onclick="goView('videos')"><div class="stat-icon" style="background:#ffedd5;color:#f97316"><i class="fa-solid fa-video"></i></div><div class="stat-details"><h3>Video</h3><h2 id="stat-videos">...</h2></div></div>
+            <!-- HIDDEN: Speaking / Writing / Topics / Video
+            <div class="stat-card clickable" onclick="goView('speaking')">...</div>
+            <div class="stat-card clickable" onclick="goView('writing')">...</div>
+            <div class="stat-card clickable" onclick="goView('topics')">...</div>
+            <div class="stat-card clickable" onclick="goView('videos')">...</div>
+            -->
           </div>
 
           <div class="dash-detail-grid">
@@ -153,16 +157,7 @@
             </div>
           </div>
 
-          <div class="dash-detail-grid mt-4">
-            <div class="chart-box">
-              <div class="flex-between" style="margin-bottom:1rem"><h3 style="margin:0"><i class="fa-solid fa-tags"></i> Chủ đề</h3><button class="btn btn-outline" onclick="goView('topics')" style="font-size:0.8rem">Quản lý</button></div>
-              <div id="dash-topics" class="dash-list"></div>
-            </div>
-            <div class="chart-box">
-              <div class="flex-between" style="margin-bottom:1rem"><h3 style="margin:0"><i class="fa-solid fa-video"></i> Video mới</h3><button class="btn btn-outline" onclick="goView('videos')" style="font-size:0.8rem">Quản lý</button></div>
-              <div id="dash-videos" class="dash-list"></div>
-            </div>
-          </div>
+          <!-- HIDDEN (out of scope): Topics / Videos detail panels -->
         </section>
 
         <!-- USERS -->
@@ -210,40 +205,20 @@
           <div id="listening-list"></div>
         </section>
 
-        <!-- SPEAKING -->
-        <section class="view" id="view-speaking">
-          <div class="page-header flex-between"><div><h1>Luyện Nói (Speaking)</h1><p>Xem / thêm / sửa / xóa chủ đề nói.</p></div>
-            <button class="btn btn-primary" onclick="showSpeakingForm()"><i class="fa-solid fa-plus"></i> Thêm Chủ Đề</button></div>
-          <div id="speaking-list"></div>
-        </section>
-
-        <!-- WRITING -->
-        <section class="view" id="view-writing">
-          <div class="page-header flex-between"><div><h1>Viết (Writing)</h1><p>Xem / thêm / sửa / xóa đề viết.</p></div>
-            <button class="btn btn-primary" onclick="showWritingForm()"><i class="fa-solid fa-plus"></i> Thêm Đề Viết</button></div>
-          <div id="writing-list"></div>
-        </section>
-
-        <!-- TOPICS -->
-        <section class="view" id="view-videos">
-          <div class="view-header">
-            <h2>Quản lý Video (StudyPhim)</h2>
-            <button class="btn btn-primary" onclick="showImportVideoModal()"><i class="fa-solid fa-cloud-arrow-up"></i> Import Text/Video Mới</button>
-          </div>
-          <div id="video-area"></div>
-        </section>
-
-        <section class="view" id="view-topics">
-          <div class="page-header flex-between"><div><h1>Quản Lý Chủ Đề</h1><p>Tạo các chủ đề dành cho từng tệp khách hàng: Developer, BA, Trẻ em, Sinh viên...</p></div>
-            <button class="btn btn-primary" onclick="showAddTopicModal()"><i class="fa-solid fa-plus"></i> Thêm Chủ Đề</button></div>
-          <div id="topics-list"></div>
-        </section>
-
-        <!-- ROLES -->
-        <section class="view" id="view-roles">
-          <div class="page-header"><h1>Phân Quyền</h1><p>Thống kê theo role từ bảng users.</p></div>
-          <div class="roles-grid" id="roles-grid"></div>
-        </section>
+        <!-- HIDDEN (out of scope): Speaking / Writing / Videos / Topics / Roles -->
+        <!--
+        <section class="view" id="view-speaking">...</section>
+        <section class="view" id="view-writing">...</section>
+        <section class="view" id="view-videos">...</section>
+        <section class="view" id="view-topics">...</section>
+        <section class="view" id="view-roles">...</section>
+        -->
+        <!-- Keep DOM shells so old JS does not crash if called; hide via CSS class -->
+        <section class="view" id="view-speaking" style="display:none!important" aria-hidden="true"></section>
+        <section class="view" id="view-writing" style="display:none!important" aria-hidden="true"></section>
+        <section class="view" id="view-videos" style="display:none!important" aria-hidden="true"><div id="video-area"></div></section>
+        <section class="view" id="view-topics" style="display:none!important" aria-hidden="true"><div id="topics-list"></div></section>
+        <section class="view" id="view-roles" style="display:none!important" aria-hidden="true"><div class="roles-grid" id="roles-grid"></div></section>
       </div>
     </main>
   </div>
@@ -356,7 +331,11 @@
   }
 
   function loadView(v) {
-    const m = { dashboard:loadDashboard, users:loadUsers, vocabulary:loadVocabulary, grammar:loadGrammar, exercises:loadReading, listening:loadListening, speaking:loadSpeaking, writing:loadWriting, videos:loadVideos, topics:loadTopics, roles:loadRoles };
+    // SCOPE: dashboard, users, vocabulary, grammar, reading(exercises), listening
+    // HIDDEN: speaking, writing, videos, topics, roles
+    const allowed = ['dashboard', 'users', 'vocabulary', 'grammar', 'exercises', 'listening'];
+    if (!allowed.includes(v)) v = 'dashboard';
+    const m = { dashboard:loadDashboard, users:loadUsers, vocabulary:loadVocabulary, grammar:loadGrammar, exercises:loadReading, listening:loadListening };
     (m[v] || loadDashboard)();
   }
 
@@ -375,10 +354,11 @@
       setText('stat-grammar', d.totalGrammar);
       setText('stat-reading', d.totalReading);
       setText('stat-listening', d.totalListening);
-      setText('stat-speaking', d.totalSpeaking);
-      setText('stat-writing', d.totalWriting || 0);
-      setText('stat-topics', d.totalTopics || 0);
-      setText('stat-videos', d.totalVideos || 0);
+      // HIDDEN stats: speaking, writing, topics, videos
+      // setText('stat-speaking', d.totalSpeaking);
+      // setText('stat-writing', d.totalWriting || 0);
+      // setText('stat-topics', d.totalTopics || 0);
+      // setText('stat-videos', d.totalVideos || 0);
 
       const ur = d.usersByRole || {};
       setText('stat-users-sub', `${ur.admins || 0} admin · ${ur.users || 0} người dùng`);
@@ -448,21 +428,9 @@
           <span class="dash-meta">${a.score != null ? a.score + ' điểm' : '—'}</span>
         </div>`).join('') : '<p class="text-muted">Chưa có hoạt động.</p>';
 
-      // Topics
-      const topics = d.topicsDetail || [];
-      document.getElementById('dash-topics').innerHTML = topics.length ? topics.map(t => `
-        <div class="dash-row">
-          <span class="dash-label">${t.icon || '🏷'} ${esc(t.name)}</span>
-          <span class="dash-meta">${t.user_count || 0} users · ${t.vocab_count || 0} từ</span>
-        </div>`).join('') : '<p class="text-muted">Chưa có chủ đề.</p>';
-
-      // Videos
-      const vids = d.recentVideos || [];
-      document.getElementById('dash-videos').innerHTML = vids.length ? vids.map(v => `
-        <div class="dash-row">
-          <span class="dash-label">${esc(v.title || v.youtube_id)}</span>
-          <span class="dash-meta">${v.duration || ''}</span>
-        </div>`).join('') : '<p class="text-muted">Chưa có video.</p>';
+      // HIDDEN: topics / videos panels
+      // document.getElementById('dash-topics')...
+      // document.getElementById('dash-videos')...
     }).catch(e => console.error(e));
   }
 

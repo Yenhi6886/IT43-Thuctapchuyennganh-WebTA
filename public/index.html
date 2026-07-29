@@ -345,6 +345,7 @@
           <input type="password" id="loginPassword" data-i18n-placeholder="auth.password.placeholder" placeholder="Enter password">
         </div>
         <button class="btn btn-primary btn-block btn-lg" onclick="login()" data-i18n="auth.login.btn">LOGIN</button>
+        <!-- HIDDEN: đăng nhập Google / Facebook — chỉ dùng đăng ký + đăng nhập username/password
         <div class="social-divider"><span data-i18n="auth.social.or">or</span></div>
         <button class="btn btn-social btn-google btn-block" onclick="loginWithGoogle()">
           <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
@@ -354,6 +355,7 @@
           <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#1877F2" d="M48 24C48 10.745 37.255 0 24 0S0 10.745 0 24c0 11.979 8.776 21.908 20.25 23.708v-16.77h-6.094V24h6.094v-5.288c0-6.014 3.583-9.337 9.065-9.337 2.625 0 5.372.469 5.372.469v5.906h-3.026c-2.981 0-3.911 1.85-3.911 3.75V24h6.656l-1.064 6.938H27.75v16.77C39.224 45.908 48 35.979 48 24"/></svg>
           <span data-i18n="auth.social.facebook">Sign in with Facebook</span>
         </button>
+        -->
         <div class="auth-toggle">
           <span data-i18n="auth.no.account">Don't have an account?</span> <a onclick="showRegister()" data-i18n="auth.register.link">Register now</a>
         </div>
@@ -412,13 +414,14 @@
           </div>
         </div>
         <div class="nav-section">
-          <div class="nav-section-title" data-i18n="nav.skills">4 Skills</div>
+          <div class="nav-section-title" data-i18n="nav.skills">Skills</div>
           <div class="nav-item" onclick="navigate('reading')" data-page="reading">
             <span class="nav-icon">📖</span> <span data-i18n="nav.reading">Reading</span>
           </div>
           <div class="nav-item" onclick="navigate('listening')" data-page="listening">
             <span class="nav-icon">🎧</span> <span data-i18n="nav.listening">Listening</span>
           </div>
+          <!-- HIDDEN (out of scope): Dictation / Video / Speaking / Writing
           <div class="nav-item" onclick="navigate('dictation')" data-page="dictation">
             <span class="nav-icon">✏️</span> <span>Dictation</span>
           </div>
@@ -431,7 +434,9 @@
           <div class="nav-item" onclick="navigate('writing')" data-page="writing">
             <span class="nav-icon">✍️</span> <span data-i18n="nav.writing">Writing</span>
           </div>
+          -->
         </div>
+        <!-- HIDDEN (out of scope): Special — Pronunciation / Interview / Scenarios / Companies / Blog
         <div class="nav-section">
           <div class="nav-section-title" data-i18n="nav.special">Special</div>
           <div class="nav-item" onclick="navigate('pronunciation')" data-page="pronunciation">
@@ -450,6 +455,7 @@
             <span class="nav-icon">📝</span> <span>Blog</span>
           </div>
         </div>
+        -->
       </nav>
       <div class="sidebar-footer">
         <div class="lang-switcher" style="margin-bottom:12px;display:flex;justify-content:center;gap:6px">
@@ -460,7 +466,7 @@
           <div class="user-avatar" id="userAvatar">U</div>
           <div class="user-details">
             <h4 id="userDisplayName">User</h4>
-            <p id="userStreak" style="font-size:12px;color:var(--text-muted)" data-i18n="profile.sidebar">📝 Profile & Saved</p>
+            <p id="userStreak" style="font-size:12px;color:var(--text-muted)" data-i18n="profile.sidebar">👤 Profile</p>
           </div>
         </div>
         <button class="btn btn-secondary btn-block btn-sm mt-16" onclick="logout()" data-i18n="nav.logout">LOGOUT</button>
@@ -473,32 +479,21 @@
   <script src="/js/api.js"></script>
   <script src="/js/app.js"></script>
 
-  <!-- Google Sign-In SDK -->
+  <!-- HIDDEN: Google / Facebook Sign-In SDK (chỉ dùng đăng ký + đăng nhập thường)
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-
-  <!-- Facebook SDK -->
   <div id="fb-root"></div>
   <script>
-    // Facebook SDK init - must be defined BEFORE loading SDK
     window.fbAsyncInit = function() {
-      // Fetch appId from server config
       fetch('/api/config').then(r => r.json()).then(config => {
         const appId = config.facebookAppId;
         if (appId) {
-          FB.init({
-            appId: appId,
-            cookie: true,
-            xfbml: true,
-            version: 'v21.0'
-          });
-          console.log('✅ Facebook SDK initialized');
-        } else {
-          console.warn('⚠️ Facebook App ID not configured in .env');
+          FB.init({ appId: appId, cookie: true, xfbml: true, version: 'v21.0' });
         }
       }).catch(e => console.warn('Could not load FB config:', e));
     };
   </script>
   <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+  -->
 
   <!-- Floating Contact Button -->
   <div id="floatingContact" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;align-items:flex-end;gap:12px">

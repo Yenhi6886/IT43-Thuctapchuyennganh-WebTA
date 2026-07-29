@@ -148,19 +148,13 @@ async function register() {
   } catch (e) { toast(e.message, 'error'); }
 }
 
-// ===== SOCIAL LOGIN =====
+/* ===== SOCIAL LOGIN (HIDDEN — chỉ dùng đăng ký + đăng nhập username/password) =====
 async function loginWithGoogle() {
   try {
     if (!window.google?.accounts?.oauth2) { toast(t('auth.social.google.not.ready'), 'error'); return; }
-    
-    // Fetch the credentials from /api/config
     const configRes = await fetch('/api/config');
     const { googleClientId } = await configRes.json();
-    if (!googleClientId) {
-      toast(t('auth.social.no.config'), 'error');
-      return;
-    }
-    
+    if (!googleClientId) { toast(t('auth.social.no.config'), 'error'); return; }
     const client = google.accounts.oauth2.initTokenClient({
       client_id: googleClientId,
       scope: 'email profile',
@@ -172,11 +166,7 @@ async function loginWithGoogle() {
           localStorage.setItem('user', JSON.stringify(currentUser));
           if (currentUser.language) i18n.setLang(currentUser.language);
           if (redirectAdminToPanel()) return;
-          if (result.isNewUser) {
-            showOnboardingPopup();
-          } else {
-            enterApp();
-          }
+          if (result.isNewUser) { showOnboardingPopup(); } else { enterApp(); }
         } catch (e) { toast(e.message, 'error'); }
       }
     });
@@ -188,9 +178,7 @@ async function loginWithFacebook() {
   try {
     if (!window.FB) { toast(t('auth.social.fb.not.ready'), 'error'); return; }
     FB.login(function(response) {
-      if (response.authResponse) {
-        handleFacebookLogin(response.authResponse.accessToken);
-      }
+      if (response.authResponse) { handleFacebookLogin(response.authResponse.accessToken); }
     }, { scope: 'email,public_profile' });
   } catch (e) { toast(t('auth.social.fb.failed') + ': ' + e.message, 'error'); }
 }
@@ -202,15 +190,12 @@ async function handleFacebookLogin(accessToken) {
     localStorage.setItem('user', JSON.stringify(currentUser));
     if (currentUser.language) i18n.setLang(currentUser.language);
     if (redirectAdminToPanel()) return;
-    if (result.isNewUser) {
-      showOnboardingPopup();
-    } else {
-      enterApp();
-    }
+    if (result.isNewUser) { showOnboardingPopup(); } else { enterApp(); }
   } catch (e) { toast(e.message, 'error'); }
 }
+===== END SOCIAL LOGIN (HIDDEN) ===== */
 
-// ===== ONBOARDING POPUP (after first registration or social login) =====
+// ===== ONBOARDING POPUP (after first registration) =====
 async function showOnboardingPopup() {
   $('authScreen').classList.add('hidden');
   $('landingPage').classList.add('hidden');
@@ -414,10 +399,11 @@ window.addEventListener('popstate', (e) => {
 });
 
 // ===== NAVIGATION =====
+// SCOPE: chỉ giữ dashboard, vocabulary, flashcards, grammar, reading, listening, profile
 function navigate(page, skipPush = false) {
   if (page === '') page = 'dashboard';
-  // List of valid pages to avoid pushing garbage routes
-  const validPages = ['dashboard', 'vocabulary', 'flashcards', 'grammar', 'reading', 'listening', 'speaking', 'writing', 'pronunciation', 'interview', 'scenarios', 'companies', 'dictation', 'video', 'profile'];
+  // HIDDEN pages (commented for restore): speaking, writing, pronunciation, interview, scenarios, companies, dictation, video
+  const validPages = ['dashboard', 'vocabulary', 'flashcards', 'grammar', 'reading', 'listening', 'profile'];
   if (!validPages.includes(page)) page = 'dashboard';
 
   if (!skipPush) history.pushState({ page }, '', '/' + (page === 'dashboard' ? '' : page));
@@ -438,12 +424,11 @@ function navigate(page, skipPush = false) {
 function renderPage(page) {
   const mc = $('mainContent');
   mc.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  // HIDDEN renderers kept in file but not wired: speaking, writing, pronunciation, interview, scenarios, companies, dictation, video
   const renderers = {
     dashboard: renderDashboard, vocabulary: renderVocabulary, flashcards: renderFlashcards,
     grammar: renderGrammar, reading: renderReading, listening: renderListening,
-    speaking: renderSpeaking, writing: renderWriting, pronunciation: renderPronunciation,
-    interview: renderInterview, scenarios: renderScenarios,
-    companies: renderCompanies, dictation: renderDictation, video: renderVideo, profile: renderProfile
+    profile: renderProfile
   };
   (renderers[page] || renderDashboard)();
 }
@@ -501,16 +486,22 @@ async function renderDashboard() {
       <div class="card"><div class="card-header"><h3 class="card-title">${t('dash.quick.start')}</h3></div>
         <div class="stats-grid" style="margin-bottom:0">
           <div class="stat-card" onclick="navigate('vocabulary')" style="cursor:pointer"><div class="stat-icon" style="background:none;width:auto;height:auto"><img src="/img/icon_vocab.png" class="img-icon" alt="Vocab"></div><div class="stat-label">${t('dash.new.vocab')}</div></div>
+          <div class="stat-card" onclick="navigate('flashcards')" style="cursor:pointer"><div class="stat-icon">🃏</div><div class="stat-label">${t('nav.flashcards')}</div></div>
+          <div class="stat-card" onclick="navigate('grammar')" style="cursor:pointer"><div class="stat-icon">✏️</div><div class="stat-label">${t('nav.grammar')}</div></div>
           <div class="stat-card" onclick="navigate('reading')" style="cursor:pointer"><div class="stat-icon" style="background:none;width:auto;height:auto"><img src="/img/icon_dashboard.png" class="img-icon" alt="Reading"></div><div class="stat-label">${t('nav.reading')}</div></div>
           <div class="stat-card" onclick="navigate('listening')" style="cursor:pointer"><div class="stat-icon">🎧</div><div class="stat-label">${t('nav.listening')}</div></div>
-          <div class="stat-card" onclick="navigate('pronunciation')" style="cursor:pointer"><div class="stat-icon" style="background:none;width:auto;height:auto"><img src="/img/icon_pronunciation.png" class="img-icon" alt="Pronunciation"></div><div class="stat-label">${t('nav.pronunciation')}</div></div>
-          <div class="stat-card" onclick="navigate('grammar')" style="cursor:pointer"><div class="stat-icon">✏️</div><div class="stat-label">${t('nav.grammar')}</div></div>
-          <div class="stat-card" onclick="navigate('scenarios')" style="cursor:pointer"><div class="stat-icon">💬</div><div class="stat-label">${t('nav.scenarios')}</div></div>
+          <div class="stat-card" onclick="navigate('profile')" style="cursor:pointer"><div class="stat-icon">👤</div><div class="stat-label">${t('nav.profile') || 'Profile'}</div></div>
+          <!-- HIDDEN: pronunciation, scenarios
+          <div class="stat-card" onclick="navigate('pronunciation')" ...>
+          <div class="stat-card" onclick="navigate('scenarios')" ...>
+          -->
         </div>
       </div>
 
-      <div id="checkinArea"></div>`;
-    renderCheckinArea();
+      <!-- HIDDEN (out of scope): check-in / badges
+      <div id="checkinArea"></div>
+      -->`;
+    // renderCheckinArea(); // HIDDEN
   } catch (e) { $('mainContent').innerHTML = `<p>Error: ${e.message}</p>`; }
 }
 
@@ -542,54 +533,61 @@ function generate30DayPlan(level, role) {
         tasks = [baseTasks.reading, baseTasks.grammar, 'Quiz kiểm tra'];
         focus = 'skills'; tag = '📖 Kỹ năng'; action = "navigate('reading')";
       } else {
-        title = 'Phát âm & nghe';
-        tasks = [baseTasks.speaking, baseTasks.listening, 'Luyện phát âm 10 từ'];
-        focus = 'practice'; tag = '🎤 Luyện tập'; action = "navigate('pronunciation')";
+        title = 'Nghe & flashcards';
+        tasks = [baseTasks.listening, 'Ôn flashcards', 'Quiz từ vựng'];
+        focus = 'practice'; tag = '🎧 Nghe'; action = "navigate('listening')";
+        // HIDDEN was: navigate('pronunciation')
       }
     } else if (d <= 14) { // Week 2: Skills building
       if (d % 4 === 0) {
-        title = 'Nghe & nói tình huống';
-        tasks = [baseTasks.listening, 'Daily standup practice', isTest ? 'Bug report bằng tiếng Anh' : 'Code review bằng tiếng Anh'];
-        focus = 'practice'; tag = '💬 Giao tiếp'; action = "navigate('scenarios')";
+        title = 'Nghe hội thoại';
+        tasks = [baseTasks.listening, 'Transcript + quiz', 'Ôn từ mới'];
+        focus = 'practice'; tag = '🎧 Listening'; action = "navigate('listening')";
+        // HIDDEN was: navigate('scenarios')
       } else if (d % 4 === 1) {
         title = `Từ vựng ${isTest ? 'QA Automation' : 'Database & DevOps'}`;
         tasks = [`${vocabPerDay} từ mới`, 'Ôn tập tuần trước', baseTasks.vocab];
         focus = 'vocab'; tag = '📚 Từ vựng'; action = "navigate('vocabulary')";
       } else if (d % 4 === 2) {
-        title = 'Writing: Email & báo cáo';
-        tasks = [baseTasks.writing, isTest ? 'Viết test report' : 'Viết technical email', 'Email mẫu'];
-        focus = 'skills'; tag = '✍️ Viết'; action = "navigate('writing')";
+        title = 'Ngữ pháp & quiz';
+        tasks = [baseTasks.grammar, 'Làm bài tập', 'Ôn lý thuyết'];
+        focus = 'skills'; tag = '✏️ Grammar'; action = "navigate('grammar')";
+        // HIDDEN was: navigate('writing')
       } else {
-        title = 'Nghe video IT';
-        tasks = ['Xem video kỹ thuật', 'Ghi chú từ mới', baseTasks.listening];
-        focus = 'skills'; tag = '🎬 Video'; action = "navigate('videos')";
+        title = 'Đọc hiểu';
+        tasks = [baseTasks.reading, 'Passage + quiz', baseTasks.listening];
+        focus = 'skills'; tag = '📖 Reading'; action = "navigate('reading')";
+        // HIDDEN was: navigate('videos')
       }
-    } else if (d <= 21) { // Week 3: Professional scenarios
+    } else if (d <= 21) { // Week 3
       if (d % 3 === 0) {
-        title = 'Tình huống dự án';
-        tasks = [isTest ? 'Sprint testing discussion' : 'Sprint planning', baseTasks.speaking, 'Meeting practice'];
-        focus = 'practice'; tag = '💼 Nghiệp vụ'; action = "navigate('scenarios')";
+        title = 'Listening nâng cao';
+        tasks = [baseTasks.listening, 'Nghe lại transcript', 'Quiz kiểm tra'];
+        focus = 'practice'; tag = '🎧 Listening'; action = "navigate('listening')";
+        // HIDDEN was: navigate('scenarios')
       } else if (d % 3 === 1) {
         title = `Từ vựng ${isTest ? 'Performance Testing' : 'Microservices & Cloud'}`;
         tasks = [`${vocabPerDay} từ nâng cao`, 'Review từ khó', 'Flashcard speed drill'];
         focus = 'vocab'; tag = '📚 Từ vựng'; action = "navigate('vocabulary')";
       } else {
-        title = 'Luyện phỏng vấn';
-        tasks = [baseTasks.speaking, isTest ? 'QA interview questions' : 'Technical interview prep', 'Nghe & trả lời'];
-        focus = 'interview'; tag = '🎯 Phỏng vấn'; action = "navigate('interview')";
+        title = 'Grammar quiz';
+        tasks = [baseTasks.grammar, 'Làm quiz', 'Ôn bài học'];
+        focus = 'skills'; tag = '✏️ Grammar'; action = "navigate('grammar')";
+        // HIDDEN was: navigate('interview')
       }
-    } else { // Week 4: Interview & mastery
+    } else { // Week 4
       if (d % 3 === 0) {
-        title = 'Mock interview';
-        tasks = ['Phỏng vấn giả lập', 'System design discussion', level === 'Advanced' ? 'Behavioral questions' : 'Technical Q&A'];
-        focus = 'interview'; tag = '🎯 Phỏng vấn'; action = "navigate('interview')";
+        title = 'Reading tổng hợp';
+        tasks = [baseTasks.reading, 'Passage dài hơn', 'Quiz'];
+        focus = 'skills'; tag = '📖 Reading'; action = "navigate('reading')";
+        // HIDDEN was: navigate('interview')
       } else if (d % 3 === 1) {
         title = 'Ôn tập tổng hợp';
         tasks = ['Ôn tập tất cả từ vựng', 'Quiz kiểm tra', `Review ${isTest ? 'testing terms' : 'coding terms'}`];
         focus = 'vocab'; tag = '📚 Ôn tập'; action = "navigate('flashcards')";
       } else {
         title = 'Kỹ năng tổng hợp';
-        tasks = [baseTasks.reading, baseTasks.writing, baseTasks.listening];
+        tasks = [baseTasks.reading, baseTasks.listening, baseTasks.grammar];
         focus = 'skills'; tag = '🌟 Tổng hợp'; action = "navigate('reading')";
       }
     }
@@ -2327,49 +2325,19 @@ async function renderProfile() {
   const mc = $('mainContent');
   mc.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
-    const res = await fetch('/api/video-notes/' + currentUser.id);
-    const notes = await res.json();
+    // HIDDEN (out of scope — video notes):
+    // const res = await fetch('/api/video-notes/' + currentUser.id);
+    // const notes = await res.json();
+    const notes = [];
     
     const avatarUrl = currentUser.avatar || '/img/mascot.png';
-    
-    let histHTML = '';
-    if(!notes.length) {
-      histHTML = `<div style="padding:40px;text-align:center;background:white;border-radius:12px;border:1px dashed var(--border)">
-        <div style="font-size:48px;margin-bottom:12px">📝</div>
-        <p style="color:var(--text-muted);font-size:15px">${t('profile.empty')}</p>
-        <p style="color:var(--text-muted);font-size:13px">${t('profile.empty.hint')}</p>
-      </div>`;
-    } else {
-      histHTML = notes.map(n => {
-        const timeVal = n.time || 0;
-        const mins = Math.floor(timeVal / 60);
-        const secs = String(timeVal % 60).padStart(2, '0');
-        return `
-        <div style="background:white; border-radius:12px; padding:16px; margin-bottom:12px; border:1px solid var(--border); box-shadow:0 1px 3px rgba(0,0,0,0.05); transition:transform 0.2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px">
-            <span class="badge" style="background:#fef3c7; color:#d97706">${n.category||'StudyPhim'}</span>
-            <div style="display:flex; gap:8px;">
-              <button onclick="speakWord('${n.text_en.replace(/'/g, "\\'")}', 'sentence')" title="${t('profile.listen')}" style="background:#e0f2fe;color:#0284c7;border:none;border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">🔊</button>
-              <button onclick="deleteSavedSentence(${n.id})" title="${t('profile.delete')}" style="background:#fee2e2;color:#dc2626;border:none;border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">🗑️</button>
-            </div>
-          </div>
-          <div style="font-size:16px; font-weight:600; color:#1a1a2e; line-height:1.5; margin-bottom:4px;">${n.text_en}</div>
-          <div style="font-size:14px; color:#666; font-style:italic; margin-bottom:8px;">${n.text_vi || ''}</div>
-          ${n.youtube_id && n.youtube_id !== 'generic' && timeVal > 0 ? `
-            <a href="#" style="font-size:13px; color:var(--primary); text-decoration:none; font-weight:500;" onclick="navigate('video'); setTimeout(()=>ytAutoOpen('${n.youtube_id}', ${timeVal}), 500); return false;">
-              📺 ${t('profile.replay.video')} (${mins}:${secs})
-            </a>
-          ` : ''}
-        </div>`;
-      }).join('');
-    }
     
     mc.innerHTML = `
       <div class="page-header">
         <h1>${t('profile.title')}</h1>
         <p>${t('profile.subtitle')}</p>
       </div>
-      <div style="display:flex; gap:24px; flex-wrap:wrap">
+      <div style="display:flex; gap:24px; flex-wrap:wrap; max-width:720px">
         <div style="flex:1; min-width:300px">
           <div style="background:linear-gradient(135deg, #16a34a 0%, #15803d 100%); color:white; border-radius:16px; padding:32px 24px; text-align:center; box-shadow:0 8px 24px rgba(22,163,74,0.25)">
              <div style="position:relative; display:inline-block; margin-bottom:16px">
@@ -2381,9 +2349,6 @@ async function renderProfile() {
              <p style="opacity:0.9; margin:0; font-size:14px">📊 ${t('profile.level')}: ${currentUser.english_level || 'Intermediate'}</p>
              <p style="opacity:0.9; margin:4px 0 0; font-size:14px">🔥 ${currentUser.streak_days||0} ${t('profile.streak')}</p>
              <p style="opacity:0.9; margin:4px 0 0; font-size:13px">📧 ${currentUser.email || 'Not set'}</p>
-             <div style="margin-top:16px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.2); font-size:13px; opacity:0.8">
-               📝 ${notes.length} ${t('profile.saved.count')}
-             </div>
           </div>
           
           <div style="background:white;border-radius:12px;padding:20px;margin-top:16px;border:1px solid var(--border)">
@@ -2393,11 +2358,14 @@ async function renderProfile() {
               ${('Notification' in window && Notification.permission === 'granted') ? '✅ ' + (t('profile.reminder.enabled') || 'Notifications Enabled') : '🔔 ' + (t('profile.reminder.enable') || 'Enable Notifications')}
             </button>
           </div>
+
+          <div style="background:white;border-radius:12px;padding:20px;margin-top:16px;border:1px solid var(--border)">
+            <button class="btn btn-secondary btn-block" onclick="logout()">${t('nav.logout') || 'LOGOUT'}</button>
+          </div>
         </div>
-        <div style="flex:2; min-width:300px">
-          <h2 style="font-size:20px; font-weight:800; margin-bottom:16px">${t('profile.saved.history')} (${notes.length})</h2>
-          <div id="savedNotesArea">${histHTML}</div>
-        </div>
+        <!-- HIDDEN: saved video notes history
+        <div style="flex:2">...notes (${notes.length})...</div>
+        -->
       </div>
     `;
   } catch(e) { mc.innerHTML = '<p>Error loading profile data</p>'; }
