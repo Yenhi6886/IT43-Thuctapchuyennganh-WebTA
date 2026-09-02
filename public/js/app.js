@@ -1,6 +1,6 @@
 // ===== STATE =====
 let currentUser = null;
-let currentPage = 'dashboard';
+let currentPage = 'intro';
 let currentDay = 1;
 
 // ===== COMPANY DATA =====
@@ -32,8 +32,7 @@ function showAuthScreen(mode) {
   $('landingPage').classList.add('hidden');
   $('authScreen').classList.remove('hidden');
   $('appLayout').classList.add('hidden');
-  if (mode === 'register') { showRegister(); }
-  else showLogin();
+  if (mode === 'register') { showRegister(); } else { showLogin(); }
 }
 
 function renderLandingCompanies() {
@@ -113,8 +112,22 @@ function toggleSidebar() {
 }
 
 // ===== AUTH =====
-function showRegister() { $('loginForm').classList.add('hidden'); $('registerForm').classList.remove('hidden'); }
-function showLogin() { $('registerForm').classList.add('hidden'); $('loginForm').classList.remove('hidden'); }
+function showRegister() {
+  $('loginForm').classList.add('hidden');
+  $('registerForm').classList.remove('hidden');
+  const tl = document.getElementById('authTabLogin');
+  const tr = document.getElementById('authTabRegister');
+  if (tl) tl.classList.remove('active');
+  if (tr) tr.classList.add('active');
+}
+function showLogin() {
+  $('registerForm').classList.add('hidden');
+  $('loginForm').classList.remove('hidden');
+  const tl = document.getElementById('authTabLogin');
+  const tr = document.getElementById('authTabRegister');
+  if (tl) tl.classList.add('active');
+  if (tr) tr.classList.remove('active');
+}
 
 async function login() {
   try {
@@ -141,10 +154,9 @@ async function register() {
     const u = $('regUsername').value.trim();
     const p = $('regPassword').value;
     if (!u || !p) return toast(t('general.fill.fields'), 'error');
-    currentUser = await API.register(u, p, n, 'Intermediate', '', i18n.currentLang, []);
+    currentUser = await API.register(u, p, n, 'Intermediate', '', 'vi', []);
     localStorage.setItem('user', JSON.stringify(currentUser));
-    // Show onboarding popup to choose level & topics (same as social login)
-    showOnboardingPopup();
+    enterApp();
   } catch (e) { toast(e.message, 'error'); }
 }
 
@@ -285,29 +297,35 @@ function enterApp() {
   $('authScreen').classList.add('hidden');
   $('appLayout').classList.remove('hidden');
   $('menuToggle').classList.remove('hidden');
+  refreshUserInfo();
+  i18n.currentLang = 'vi';
+  localStorage.setItem('lang', 'vi');
+  document.documentElement.lang = 'vi';
+  i18n.updateStaticElements();
+  if (!currentUser.email || currentUser.email.includes('@facebook.com')) {
+    showEmailRequiredPopup();
+  }
+  setupStudyReminder();
+  const initialPage = location.pathname.substring(1) || 'intro';
+  navigate(initialPage === 'dashboard' ? 'intro' : initialPage, true);
+}
+
+async function refreshUserInfo() {
+  if (!currentUser) return;
   $('userDisplayName').textContent = currentUser.display_name || currentUser.username;
-  
-  // Show avatar or initial
   const avatarEl = $('userAvatar');
   if (currentUser.avatar) {
     avatarEl.innerHTML = `<img src="${currentUser.avatar}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
   } else {
     avatarEl.textContent = (currentUser.display_name || currentUser.username).charAt(0).toUpperCase();
   }
-  
-  $('userStreak').textContent = `🔥 ${currentUser.streak_days || 0} ${t('dash.streak.days')}`;
-  i18n.updateStaticElements();
-  
-  // Check if email is required (no email set)
-  if (!currentUser.email || currentUser.email.includes('@facebook.com')) {
-    showEmailRequiredPopup();
-  }
-  
-  // Setup study reminder notifications
-  setupStudyReminder();
-  
-  const initialPage = location.pathname.substring(1) || 'dashboard';
-  navigate(initialPage, true);
+  const subline = $('userSubline');
+  if (subline) subline.textContent = '';
+  try {
+    const profile = await API.request('GET', `/api/auth/profile/${currentUser.id}`);
+    currentUser = { ...currentUser, ...profile };
+    localStorage.setItem('user', JSON.stringify(currentUser));
+  } catch (_) {}
 }
 
 // ===== EMAIL REQUIRED POPUP =====
@@ -364,8 +382,8 @@ function setupStudyReminder() {
 function showStudyReminder() {
   // Browser notification
   if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification('🦅 Eagle English', {
-      body: t('reminder.body') || 'Time to study English! 📚 Keep your streak going!',
+    new Notification('English Eight', {
+      body: t('reminder.body') || 'Đã 20:30 — đến giờ học tiếng Anh rồi! 📚',
       icon: '/img/mascot.png'
     });
   }
@@ -376,16 +394,16 @@ function showStudyReminder() {
 // Check saved session
 window.addEventListener('DOMContentLoaded', () => {
   // Initialize language from localStorage
-  const savedLang = localStorage.getItem('lang') || 'en';
-  i18n.currentLang = savedLang;
-  document.documentElement.lang = savedLang === 'vi' ? 'vi' : 'en';
-  document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.lang === savedLang));
+  const savedLang = localStorage.getItem('lang') || 'vi';
+  i18n.currentLang = savedLang === 'en' ? 'vi' : savedLang;
+  localStorage.setItem('lang', 'vi');
+  document.documentElement.lang = 'vi';
   i18n.updateStaticElements();
 
   const saved = localStorage.getItem('user');
   if (saved) {
     currentUser = JSON.parse(saved);
-    if (currentUser.language) { i18n.currentLang = currentUser.language; localStorage.setItem('lang', currentUser.language); i18n.updateStaticElements(); document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.lang === currentUser.language)); }
+    if (currentUser.language) { i18n.currentLang = 'vi'; localStorage.setItem('lang', 'vi'); i18n.updateStaticElements(); }
     enterApp();
   } else { showLanding(); }
 });
@@ -393,20 +411,19 @@ window.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('popstate', (e) => {
   if (e.state && e.state.page) navigate(e.state.page, true);
   else {
-    const p = location.pathname.substring(1) || 'dashboard';
-    navigate(p, true);
+    const p = location.pathname.substring(1) || 'intro';
+    navigate(p === 'dashboard' ? 'intro' : p, true);
   }
 });
 
 // ===== NAVIGATION =====
-// SCOPE: chỉ giữ dashboard, vocabulary, flashcards, grammar, reading, listening, profile
+// SCOPE: intro, vocabulary, grammar, flashcards, stories, shadowing, profile
 function navigate(page, skipPush = false) {
-  if (page === '') page = 'dashboard';
-  // HIDDEN pages (commented for restore): speaking, writing, pronunciation, interview, scenarios, companies, dictation, video
-  const validPages = ['dashboard', 'vocabulary', 'flashcards', 'grammar', 'reading', 'listening', 'profile'];
-  if (!validPages.includes(page)) page = 'dashboard';
+  if (page === '' || page === 'reading' || page === 'dashboard') page = page === 'reading' ? 'stories' : 'intro';
+  const validPages = ['intro', 'vocabulary', 'grammar', 'flashcards', 'stories', 'shadowing'];
+  if (!validPages.includes(page)) page = 'intro';
 
-  if (!skipPush) history.pushState({ page }, '', '/' + (page === 'dashboard' ? '' : page));
+  if (!skipPush) history.pushState({ page }, '', '/' + (page === 'intro' ? '' : page));
   
   currentPage = page;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -426,32 +443,74 @@ function renderPage(page) {
   mc.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   // HIDDEN renderers kept in file but not wired: speaking, writing, pronunciation, interview, scenarios, companies, dictation, video
   const renderers = {
-    dashboard: renderDashboard, vocabulary: renderVocabulary, flashcards: renderFlashcards,
-    grammar: renderGrammar, reading: renderReading, listening: renderListening,
-    profile: renderProfile
+    intro: renderIntro, vocabulary: renderVocabulary, flashcards: renderFlashcards,
+    grammar: renderGrammar, stories: renderStories, shadowing: renderShadowing
   };
-  (renderers[page] || renderDashboard)();
+  (renderers[page] || renderIntro)();
 }
 
-// ===== DASHBOARD =====
+// ===== INTRO (click logo) =====
+function renderIntro() {
+  const mc = $('mainContent');
+  const name = currentUser?.display_name || currentUser?.username || 'bạn';
+  mc.innerHTML = `
+    <div class="intro-hero">
+      <img src="/img/mascot.png" alt="English Eight">
+      <div>
+        <h1>${t('intro.welcome')}, ${name}! 👋</h1>
+        <p>${t('intro.desc')}</p>
+      </div>
+    </div>
+    <div class="intro-features">
+      <div class="intro-feature" onclick="navigate('vocabulary')" style="cursor:pointer">
+        <div class="icon">📚</div><h3>${t('nav.vocabulary')}</h3><p>${t('intro.feat.vocab')}</p>
+      </div>
+      <div class="intro-feature" onclick="navigate('grammar')" style="cursor:pointer">
+        <div class="icon">✏️</div><h3>${t('nav.grammar')}</h3><p>${t('intro.feat.grammar')}</p>
+      </div>
+      <div class="intro-feature" onclick="navigate('flashcards')" style="cursor:pointer">
+        <div class="icon">🃏</div><h3>${t('nav.flashcards')}</h3><p>${t('intro.feat.flash')}</p>
+      </div>
+      <div class="intro-feature" onclick="navigate('stories')" style="cursor:pointer">
+        <div class="icon">📖</div><h3>${t('nav.stories')}</h3><p>${t('intro.feat.stories')}</p>
+      </div>
+      <div class="intro-feature" onclick="navigate('shadowing')" style="cursor:pointer">
+        <div class="icon">🎬</div><h3>${t('nav.shadowing')}</h3><p>${t('intro.feat.shadow')}</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3 class="card-title" style="margin-bottom:12px">${t('intro.how.title')}</h3>
+      <div style="display:grid;gap:12px">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <span style="width:28px;height:28px;border-radius:50%;background:var(--leaf);color:white;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0">1</span>
+          <p style="color:var(--text-secondary);line-height:1.6">${t('intro.how.step1')}</p>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <span style="width:28px;height:28px;border-radius:50%;background:var(--leaf);color:white;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0">2</span>
+          <p style="color:var(--text-secondary);line-height:1.6">${t('intro.how.step2')}</p>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <span style="width:28px;height:28px;border-radius:50%;background:var(--leaf);color:white;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0">3</span>
+          <p style="color:var(--text-secondary);line-height:1.6">${t('intro.how.step3')}</p>
+        </div>
+      </div>
+    </div>
+    <div class="intro-cta">
+      <button class="btn btn-primary btn-lg" onclick="navigate('vocabulary')">${t('intro.cta')}</button>
+    </div>`;
+}
+
+// ===== DASHBOARD (legacy, not in sidebar) =====
 async function renderDashboard() {
   try {
     const prog = await API.getProgress(currentUser.id);
     const mc = $('mainContent');
     const pct = prog.vocabTotal > 0 ? Math.round((prog.vocabLearned / prog.vocabTotal) * 100) : 0;
     const todayStats = prog.dailyStats?.[0] || {};
-    const level = currentUser.english_level || 'Beginner';
-    const role = currentUser.job_role || 'Developer';
-    const levelBadge = { Beginner: '🌱', Intermediate: '📗', Advanced: '🚀' };
-    const plan = generate30DayPlan(level, role);
-    const today = prog.streak || 1;
-    const planDay = Math.min(today, 30);
 
     mc.innerHTML = `
-      <div class="page-header"><h1>${t('dash.hello')}, ${currentUser.display_name || currentUser.username}! 👋</h1>
-        <p>${levelBadge[level]} ${level} · ${role} · ${t('dash.plan')}</p></div>
+      <div class="page-header"><h1>${t('dash.hello')}, ${currentUser.display_name || currentUser.username}! 👋</h1></div>
       <div class="stats-grid">
-        <div class="stat-card"><div class="stat-icon">🔥</div><div class="stat-value">${prog.streak || 0}</div><div class="stat-label">${t('dash.streak')}</div></div>
         <div class="stat-card"><div class="stat-icon">📚</div><div class="stat-value">${prog.vocabLearned || 0}/${prog.vocabTotal}</div><div class="stat-label">${t('dash.vocab.learned')}</div></div>
         <div class="stat-card"><div class="stat-icon">📝</div><div class="stat-value">${todayStats.exercises_completed || 0}</div><div class="stat-label">${t('dash.exercises')}</div></div>
         <div class="stat-card"><div class="stat-icon">🎯</div><div class="stat-value">${pct}%</div><div class="stat-label">${t('dash.progress')}</div></div>
@@ -461,48 +520,17 @@ async function renderDashboard() {
         <p style="margin-top:8px;font-size:13px;color:var(--text-muted)">${prog.vocabLearned || 0} / ${prog.vocabTotal} ${t('dash.words.mastered')}</p>
       </div>
 
-      <div class="card"><div class="card-header"><h3 class="card-title">${t('dash.roadmap')} - ${level} ${role}</h3></div>
-        <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">${t('dash.roadmap.desc')} ${planDay}.</p>
-        <div style="display:grid;gap:8px;max-height:400px;overflow-y:auto;padding-right:8px">
-          ${plan.map((d, i) => {
-      const dayN = i + 1;
-      const isPast = dayN < planDay;
-      const isToday = dayN === planDay;
-      const isFuture = dayN > planDay;
-      return `<div style="display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-radius:12px;background:${isToday ? 'var(--green-50)' : 'var(--bg-card)'};border:${isToday ? '2px solid var(--leaf)' : '1px solid var(--border)'};opacity:${isFuture ? '0.6' : '1'};cursor:pointer" onclick="${isToday ? d.action : ''}">
-              <div style="min-width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;background:${isPast ? 'var(--leaf)' : isToday ? 'var(--leaf-dark)' : 'var(--bg-secondary)'};color:${isPast || isToday ? 'white' : 'var(--text-muted)'}">
-                ${isPast ? '✓' : dayN}
-              </div>
-              <div style="flex:1">
-                <div style="font-weight:800;font-size:14px;color:${isToday ? 'var(--leaf-dark)' : 'var(--text-primary)'}">${isToday ? '▶ ' : ''}${t('plan.day')} ${dayN}: ${d.title}</div>
-                <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${d.tasks.join(' · ')}</div>
-              </div>
-              <span style="font-size:11px;padding:4px 8px;border-radius:20px;background:${d.focus === 'vocab' ? '#e8f5e9' : d.focus === 'skills' ? '#e3f2fd' : d.focus === 'practice' ? '#fff3e0' : '#fce4ec'};color:${d.focus === 'vocab' ? '#2e7d32' : d.focus === 'skills' ? '#1565c0' : d.focus === 'practice' ? '#e65100' : '#c62828'};font-weight:700">${d.tag}</span>
-            </div>`;
-    }).join('')}
-        </div>
-      </div>
-
       <div class="card"><div class="card-header"><h3 class="card-title">${t('dash.quick.start')}</h3></div>
         <div class="stats-grid" style="margin-bottom:0">
-          <div class="stat-card" onclick="navigate('vocabulary')" style="cursor:pointer"><div class="stat-icon" style="background:none;width:auto;height:auto"><img src="/img/icon_vocab.png" class="img-icon" alt="Vocab"></div><div class="stat-label">${t('dash.new.vocab')}</div></div>
-          <div class="stat-card" onclick="navigate('flashcards')" style="cursor:pointer"><div class="stat-icon">🃏</div><div class="stat-label">${t('nav.flashcards')}</div></div>
+          <div class="stat-card" onclick="navigate('vocabulary')" style="cursor:pointer"><div class="stat-icon">📚</div><div class="stat-label">${t('nav.vocabulary')}</div></div>
           <div class="stat-card" onclick="navigate('grammar')" style="cursor:pointer"><div class="stat-icon">✏️</div><div class="stat-label">${t('nav.grammar')}</div></div>
-          <div class="stat-card" onclick="navigate('reading')" style="cursor:pointer"><div class="stat-icon" style="background:none;width:auto;height:auto"><img src="/img/icon_dashboard.png" class="img-icon" alt="Reading"></div><div class="stat-label">${t('nav.reading')}</div></div>
           <div class="stat-card" onclick="navigate('listening')" style="cursor:pointer"><div class="stat-icon">🎧</div><div class="stat-label">${t('nav.listening')}</div></div>
-          <div class="stat-card" onclick="navigate('profile')" style="cursor:pointer"><div class="stat-icon">👤</div><div class="stat-label">${t('nav.profile') || 'Profile'}</div></div>
-          <!-- HIDDEN: pronunciation, scenarios
-          <div class="stat-card" onclick="navigate('pronunciation')" ...>
-          <div class="stat-card" onclick="navigate('scenarios')" ...>
-          -->
+          <div class="stat-card" onclick="navigate('flashcards')" style="cursor:pointer"><div class="stat-icon">🃏</div><div class="stat-label">${t('nav.flashcards')}</div></div>
+          <div class="stat-card" onclick="navigate('stories')" style="cursor:pointer"><div class="stat-icon">📖</div><div class="stat-label">${t('nav.stories')}</div></div>
+          <div class="stat-card" onclick="navigate('shadowing')" style="cursor:pointer"><div class="stat-icon">🎬</div><div class="stat-label">${t('nav.shadowing')}</div></div>
         </div>
-      </div>
-
-      <!-- HIDDEN (out of scope): check-in / badges
-      <div id="checkinArea"></div>
-      -->`;
-    // renderCheckinArea(); // HIDDEN
-  } catch (e) { $('mainContent').innerHTML = `<p>Error: ${e.message}</p>`; }
+      </div>`;
+  } catch (e) { $('mainContent').innerHTML = `<p>Lỗi: ${e.message}</p>`; }
 }
 
 // ===== 30-DAY LEARNING PLAN GENERATOR =====
@@ -604,8 +632,14 @@ function generate30DayPlan(level, role) {
 }
 
 // ===== DAY SELECTOR COMPONENT =====
+function pageHeader(title) {
+  return `<div class="page-header"><h1>${title}</h1></div>`;
+}
+
+let currentStoryTopic = '';
+
 function daySelector(total, active, onChange) {
-  let html = '<div class="day-selector"><span style="font-size:14px;font-weight:600;color:var(--text-secondary);margin-right:8px">Day:</span>';
+  let html = `<div class="day-selector"><span style="font-size:14px;font-weight:600;color:var(--text-secondary);margin-right:8px">${t('general.day')}:</span>`;
   for (let i = 1; i <= total; i++) {
     html += `<button class="day-btn ${i === active ? 'active' : ''}" onclick="${onChange}(${i})">${i}</button>`;
   }
@@ -613,43 +647,37 @@ function daySelector(total, active, onChange) {
 }
 
 // ===== VOCABULARY =====
+const VOCAB_CAT_ICONS = { 'Algorithms': '🧮', 'Data Systems': '🗄️', 'Hardware & Infrastructure': '🖥️', 'Testing & QA': '🧪', 'DevOps': '⚙️', 'Frontend': '🎨', 'Backend': '🔧', 'Database': '🗃️', 'Security': '🔒', 'Networking': '🌐', 'Cloud': '☁️', 'Mobile': '📱', 'AI/ML': '🤖' };
+
 async function renderVocabulary() {
   const mc = $('mainContent');
-  mc.innerHTML = `<div class="page-header"><h1>${t('vocab.title')}</h1><p>${t('vocab.subtitle')}</p></div>
-    ${daySelector(15, currentDay, 'loadVocabDay')}
+  mc.innerHTML = `${pageHeader(t('vocab.title'))}
     <div class="category-filter" id="vocabCategoryFilter">
-      <button class="filter-btn active" onclick="filterVocab('')">${t('vocab.all')}</button>
+      <button class="filter-btn active" onclick="loadVocabCategory('')">${t('vocab.all')}</button>
     </div>
     <div id="vocabList" class="vocab-grid"><div class="loading"><div class="spinner"></div></div></div>`;
-  // Load categories dynamically
   try {
-    const allWords = await API.getDailyVocab(currentUser.id, currentDay);
-    const categories = [...new Set(allWords.map(w => w.category).filter(Boolean))];
-    const catIcons = { 'General': '🌍', 'Business': '💼', 'Technology': '💻', 'Education': '🎓', 'Healthcare': '🏥', 'Daily Life': '🏠', 'Travel': '✈️', 'Food': '🍕', 'Nature': '🌿', 'Sports': '⚽', 'Entertainment': '🎬', 'Science': '🔬', 'Algorithms': '🧮', 'Data Systems': '🗄️', 'Hardware & Infrastructure': '🖥️', 'Testing & QA': '🧪', 'DevOps': '⚙️', 'Frontend': '🎨', 'Backend': '🔧', 'Database': '🗃️', 'Security': '🔒', 'Networking': '🌐', 'Cloud': '☁️', 'Mobile': '📱', 'AI/ML': '🤖' };
+    const cats = await API.getVocabCategories(currentUser.id);
     const filterEl = $('vocabCategoryFilter');
-    categories.forEach(cat => {
-      const icon = catIcons[cat] || '📂';
-      filterEl.innerHTML += `<button class="filter-btn" onclick="filterVocab('${cat.replace(/'/g, "\\'")}')">${icon} ${cat}</button>`;
+    cats.forEach(c => {
+      const cat = c.category || '';
+      const icon = VOCAB_CAT_ICONS[cat] || '📂';
+      filterEl.innerHTML += `<button class="filter-btn" onclick="loadVocabCategory('${cat.replace(/'/g, "\\'")}')">${icon} ${cat} (${c.count})</button>`;
     });
   } catch(e) {}
-  loadVocabDay(currentDay);
+  loadVocabCategory('');
 }
 
-async function loadVocabDay(day) {
-  currentDay = day;
-  document.querySelectorAll('.day-btn').forEach((b, i) => b.classList.toggle('active', i + 1 === day));
+async function loadVocabCategory(cat) {
+  window._vocabCategory = cat;
+  document.querySelectorAll('#vocabCategoryFilter .filter-btn').forEach((b, i) => {
+    b.classList.toggle('active', (cat === '' && i === 0) || (cat && b.textContent.includes(cat)));
+  });
   try {
-    const words = await API.getDailyVocab(currentUser.id, day);
+    const words = await API.getVocabByCategory(currentUser.id, cat, 'all');
     window._vocabWords = words;
     renderVocabList(words);
   } catch (e) { $('vocabList').innerHTML = `<p>Error: ${e.message}</p>`; }
-}
-
-function filterVocab(cat) {
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
-  const words = cat ? window._vocabWords.filter(w => w.category === cat) : window._vocabWords;
-  renderVocabList(words);
 }
 
 function renderVocabList(words) {
@@ -673,14 +701,17 @@ function renderVocabList(words) {
           <button class="btn btn-sm btn-warning" onclick="event.stopPropagation();markLearned(${w.id}, false)">✗ Review</button>
         </div>
       </div>
-    </div>`).join('') : '<p style="color:var(--text-muted)">No words for this day yet.</p>';
+    </div>`).join('') : '<p style="color:var(--text-muted)">Chưa có từ vựng trong chủ đề này.</p>';
 }
 
 async function markLearned(vocabId, correct) {
   try {
     await API.learnWord(currentUser.id, vocabId, correct);
     toast(correct ? t('vocab.marked.known') : t('vocab.added.review'), correct ? 'success' : 'info');
-    loadVocabDay(currentDay);
+    const activeBtn = document.querySelector('#vocabCategoryFilter .filter-btn.active');
+    const cat = activeBtn?.textContent?.includes('Tất cả') ? '' : (window._flashcardCategory || '');
+    if ($('flashcardArea')) loadFlashcardWords(_flashcardCategory, _flashcardFilter);
+    else if ($('vocabList')) loadVocabCategory(window._vocabCategory || '');
   } catch (e) { toast(e.message, 'error'); }
 }
 
@@ -691,25 +722,66 @@ function speakWord(text) {
 }
 
 // ===== FLASHCARDS =====
+let _flashcardCategory = '';
+let _flashcardFilter = 'unlearned';
+
 async function renderFlashcards() {
+  const mc = $('mainContent');
+  mc.innerHTML = `${pageHeader(t('flash.title'))}
+    <div id="flashcardTopics"></div>
+    <div id="flashcardArea"></div>`;
   try {
-    const words = await API.getDailyVocab(currentUser.id, currentDay);
-    window._flashcardWords = words;
-    window._flashcardIdx = 0;
-    const mc = $('mainContent');
-    mc.innerHTML = `<div class="page-header"><h1>${t('flash.title')}</h1><p>${t('flash.subtitle')}</p></div>
-      ${daySelector(15, currentDay, 'loadFlashcardDay')}
-      <div id="flashcardArea"></div>`;
-    renderFlashcard();
-  } catch (e) { $('mainContent').innerHTML = `<p>Error: ${e.message}</p>`; }
+    const cats = await API.getVocabCategories(currentUser.id);
+    const area = $('flashcardTopics');
+    if (!cats.length) {
+      area.innerHTML = '<p style="color:var(--text-muted)">Chưa có chủ đề từ vựng.</p>';
+      return;
+    }
+    area.innerHTML = `<div class="category-filter" style="margin-bottom:12px">${cats.map(c => {
+      const cat = c.category || '';
+      const icon = VOCAB_CAT_ICONS[cat] || '📂';
+      const safe = cat.replace(/'/g, "\\'");
+      return `<button class="filter-btn ${cat === _flashcardCategory ? 'active' : ''}" onclick="selectFlashcardTopic('${safe}')">${icon} ${cat}</button>`;
+    }).join('')}</div>`;
+    if (!_flashcardCategory && cats[0]) _flashcardCategory = cats[0].category;
+    document.querySelectorAll('#flashcardTopics .filter-btn').forEach(b => {
+      if (b.textContent.includes(_flashcardCategory)) b.classList.add('active');
+    });
+    area.innerHTML += `<div class="category-filter" id="flashcardLearnFilter" style="margin-bottom:16px">
+      <button class="filter-btn ${_flashcardFilter==='unlearned'?'active':''}" onclick="setFlashcardFilter('unlearned')">📋 Chưa học</button>
+      <button class="filter-btn ${_flashcardFilter==='learned'?'active':''}" onclick="setFlashcardFilter('learned')">✅ Đã học</button>
+      <button class="filter-btn ${_flashcardFilter==='all'?'active':''}" onclick="setFlashcardFilter('all')">Tất cả</button>
+    </div>`;
+    await loadFlashcardWords(_flashcardCategory, _flashcardFilter);
+  } catch (e) { $('flashcardArea').innerHTML = `<p>Error: ${e.message}</p>`; }
 }
 
-function loadFlashcardDay(day) { currentDay = day; renderFlashcards(); }
+function selectFlashcardTopic(cat) {
+  _flashcardCategory = cat;
+  window._flashcardIdx = 0;
+  renderFlashcards();
+}
+
+function setFlashcardFilter(filter) {
+  _flashcardFilter = filter;
+  window._flashcardIdx = 0;
+  renderFlashcards();
+}
+
+async function loadFlashcardWords(category, filter) {
+  try {
+    const words = await API.getVocabByCategory(currentUser.id, category, filter);
+    window._flashcardWords = words;
+    window._flashcardIdx = window._flashcardIdx || 0;
+    if (window._flashcardIdx >= words.length) window._flashcardIdx = 0;
+    renderFlashcard();
+  } catch (e) { $('flashcardArea').innerHTML = `<p>Error: ${e.message}</p>`; }
+}
 
 function renderFlashcard() {
   const words = window._flashcardWords;
   const idx = window._flashcardIdx;
-  if (!words || !words.length) { $('flashcardArea').innerHTML = '<p class="text-center" style="color:var(--text-muted)">No words for this day.</p>'; return; }
+  if (!words || !words.length) { $('flashcardArea').innerHTML = `<p class="text-center" style="color:var(--text-muted)">Không có từ trong mục này. Thử chọn "Chưa học" hoặc chủ đề khác.</p>`; return; }
   const w = words[idx];
   $('flashcardArea').innerHTML = `
     <p class="text-center mb-16" style="color:var(--text-muted)">${idx + 1} / ${words.length}</p>
@@ -720,11 +792,10 @@ function renderFlashcard() {
       </div>
     </div>
     <div class="flex gap-8" style="justify-content:center;margin-top:16px">
-      <button class="btn btn-secondary" onclick="prevFlashcard()" ${idx === 0 ? 'disabled' : ''}>${t('flash.prev') || '← Previous'}</button>
-      <button class="btn btn-primary" onclick="speakWord('${w.term.replace(/'/g, "\\'")}')">🔊 Listen</button>
+      <button class="btn btn-secondary" onclick="prevFlashcard()" ${idx === 0 ? 'disabled' : ''}>${t('flash.prev') || '← Trước'}</button>
       ${idx >= words.length - 1 ? 
         `<button class="btn" style="background:var(--success);color:#fff" onclick="startFlashcardQuiz()">${t('flash.practice.btn')}</button>` : 
-        `<button class="btn btn-secondary" onclick="nextFlashcard()">${t('flash.next') || 'Next →'}</button>`}
+        `<button class="btn btn-secondary" onclick="nextFlashcard()">${t('flash.next') || 'Tiếp →'}</button>`}
     </div>
     <div class="flex gap-8" style="justify-content:center;margin-top:12px">
       <button class="btn btn-success btn-sm" onclick="markLearned(${w.id},true); ${idx >= words.length - 1 ? 'startFlashcardQuiz()' : 'nextFlashcard()'}">${t('flash.btn.know')}</button>
@@ -825,30 +896,47 @@ function checkFcQuiz(selectedId, correctId, optIndex) {
 }
 
 // ===== GRAMMAR =====
+let _grammarType = '';
+
 async function renderGrammar() {
   const mc = $('mainContent');
-  mc.innerHTML = `<div class="page-header"><h1>${t('gram.title')}</h1><p>${t('gram.subtitle')}</p></div>
-    ${daySelector(15, currentDay, 'loadGrammarDay')}
+  mc.innerHTML = `${pageHeader(t('gram.title'))}
+    <div id="grammarTypeFilter" class="category-filter" style="margin-bottom:16px"></div>
     <div id="grammarLessons"></div>
     <div id="grammarList"></div>`;
-  loadGrammarDay(currentDay);
+  try {
+    const types = await API.getGrammarTypes();
+    const filterEl = $('grammarTypeFilter');
+    if (!types.length) {
+      filterEl.innerHTML = '<p style="color:var(--text-muted)">Chưa có dạng ngữ pháp.</p>';
+      return;
+    }
+    filterEl.innerHTML = types.map(tp => {
+      const safe = tp.name.replace(/'/g, "\\'");
+      return `<button class="filter-btn ${tp.name === _grammarType ? 'active' : ''}" onclick="loadGrammarType('${safe}')">${tp.name} (${tp.count || 0})</button>`;
+    }).join('');
+    if (!_grammarType) _grammarType = types[0].name;
+    loadGrammarType(_grammarType);
+  } catch (e) { $('grammarLessons').innerHTML = `<p>Error: ${e.message}</p>`; }
 }
 
-async function loadGrammarDay(day) {
-  currentDay = day;
-  document.querySelectorAll('.day-btn').forEach((b, i) => b.classList.toggle('active', i + 1 === day));
+async function loadGrammarType(type) {
+  _grammarType = type;
+  document.querySelectorAll('#grammarTypeFilter .filter-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.startsWith(type));
+  });
 
-  // 1. Load theory lessons for this day
+  // 1. Load theory lessons for this type
   try {
-    const lessons = await fetch(`/api/grammar/lessons/${day}`).then(r => r.json());
+    const lessons = await API.getGrammarLessonsByType(type);
     if (lessons && lessons.length) {
       $('grammarLessons').innerHTML = `<div class="card" style="margin-bottom:20px;border-left:4px solid var(--leaf)">
-        <div class="card-header"><h3 class="card-title">${t('gram.theory.title')} ${day}</h3></div>
+        <div class="card-header"><h3 class="card-title">${t('gram.theory.title')}: ${escHtml(type)}</h3></div>
         ${lessons.map(l => {
-          const title = (i18n.currentLang === 'en' && l.title_en) ? l.title_en : l.title_vi;
-          const content = (i18n.currentLang === 'en' && l.content_en) ? l.content_en : l.content_vi;
-          const examples = (i18n.currentLang === 'en' && l.examples_en) ? l.examples_en : l.examples_vi;
-          const tips = (i18n.currentLang === 'en' && l.tips_en) ? l.tips_en : l.tips_vi;
+          const title = l.title_vi;
+          const content = l.content_vi;
+          const examples = l.examples_vi;
+          const tips = l.tips_vi;
           return `
           <div style="padding:16px;border-bottom:1px solid var(--border)">
             <h4 style="cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="this.parentElement.querySelector('.lesson-body').classList.toggle('hidden')">
@@ -865,7 +953,6 @@ async function loadGrammarDay(day) {
           </div>`;
         }).join('')}
       </div>`;
-      // Add a 'Start Practice' button at the bottom of theory
       $('grammarLessons').innerHTML += `
         <div style="text-align:center; margin: 24px 0 32px 0;">
           <h3 style="margin-bottom:8px;color:#16a34a">${t('gram.practice.ready')}</h3>
@@ -877,11 +964,10 @@ async function loadGrammarDay(day) {
     }
   } catch (e) { $('grammarLessons').innerHTML = ''; }
 
-  // 2. Load exercises
   const hasTheory = $('grammarLessons').innerHTML.trim().length > 0;
   
   try {
-    const exercises = await API.getGrammar(day);
+    const exercises = await API.getGrammarExercisesByType(type);
     $('grammarList').innerHTML = `<div id="grammarListCont" class="${hasTheory ? 'hidden' : ''}">` + (exercises.length ? `<div class="card"><div class="card-header"><h3 class="card-title">${t('gram.practice.title')}</h3></div><div style="padding:16px">` + exercises.map((ex, i) => `
       <div class="quiz-question" id="grammar-${ex.id}">
         <h4>Q${i + 1}. ${ex.question} <span class="badge badge-algo">${ex.grammar_topic || ''}</span></h4>
@@ -894,7 +980,7 @@ async function loadGrammarDay(day) {
           💡 ${ex.explanation || ''}
         </div>
       </div>`).join('') + '</div></div><div id="grammarScore" class="hidden card text-center"></div>'
-      : '<p style="color:var(--text-muted)">No exercises for this day yet.</p>') + '</div>';
+      : `<p style="color:var(--text-muted)">${t('gram.no.exercises')}</p>`) + '</div>';
     window._grammarTotal = exercises.length;
     window._grammarCorrect = 0;
     window._grammarDone = 0;
@@ -919,44 +1005,136 @@ function checkGrammar(id, selected, correct, idx, total) {
     const el = document.getElementById('grammarScore');
     el.classList.remove('hidden');
     el.innerHTML = `<div class="score-circle ${score >= 80 ? 'score-high' : score >= 50 ? 'score-mid' : 'score-low'}">${score}%</div><p style="font-size:16px;font-weight:600;margin-top:8px">${window._grammarCorrect}/${window._grammarTotal} correct</p>`;
-    API.trackActivity(currentUser.id, 'grammar', currentDay, score);
+    API.trackActivity(currentUser.id, 'grammar', _grammarType, score);
   }
 }
 
-// ===== READING =====
-async function renderReading() {
-  const mc = $('mainContent');
-  mc.innerHTML = `<div class="page-header"><h1>${t('read.title')}</h1><p>${t('read.subtitle')}</p></div>
-    ${daySelector(15, currentDay, 'loadReadingDay')}<div id="readingContent"></div>`;
-  loadReadingDay(currentDay);
+// ===== READING (bilingual hover) =====
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-async function loadReadingDay(day) {
-  currentDay = day;
-  document.querySelectorAll('.day-btn').forEach((b, i) => b.classList.toggle('active', i + 1 === day));
+function buildBilingualPassage(content, vocabList) {
+  if (!content) return '';
+  let text = escHtml(content);
+  // [[word|nghĩa]] markup from admin
+  text = text.replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, (_, en, vi) =>
+    `<span class="bilingual-word" data-vi="${escHtml(vi.trim())}">${escHtml(en.trim())}</span>`);
+  // Auto-highlight from vocabulary of the day
+  const terms = (vocabList || [])
+    .map(v => ({ term: v.term, vi: v.definition_vi }))
+    .filter(v => v.term && v.vi)
+    .sort((a, b) => b.term.length - a.term.length);
+  for (const { term, vi } of terms) {
+    const re = new RegExp(`\\b(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\b(?![^<]*>)`, 'gi');
+    text = text.replace(re, (match) => `<span class="bilingual-word" data-vi="${escHtml(vi)}">${match}</span>`);
+  }
+  // Fallback: common words if few highlights
+  const highlights = (text.match(/bilingual-word/g) || []).length;
+  if (highlights < 5) {
+    const fallback = {
+      architecture: 'kiến trúc', application: 'ứng dụng', development: 'phát triển',
+      services: 'dịch vụ', banking: 'ngân hàng', database: 'cơ sở dữ liệu',
+      testing: 'kiểm thử', deployment: 'triển khai', transaction: 'giao dịch',
+      system: 'hệ thống', software: 'phần mềm', design: 'thiết kế',
+      performance: 'hiệu năng', security: 'bảo mật', communication: 'giao tiếp'
+    };
+    for (const [en, vi] of Object.entries(fallback)) {
+      if ((text.match(/bilingual-word/g) || []).length >= 12) break;
+      const re = new RegExp(`\\b(${en})\\b(?![^<]*>)`, 'gi');
+      text = text.replace(re, (match) => `<span class="bilingual-word" data-vi="${vi}">${match}</span>`);
+    }
+  }
+  return text;
+}
+
+async function renderStories() {
+  return renderReading();
+}
+
+async function renderShadowing() {
+  const mc = $('mainContent');
+  mc.innerHTML = `${pageHeader(t('shadow.title'))}
+    <div id="shadowingTopics"></div>
+    <div id="ytListArea"></div>`;
+  showShadowingTopics();
+}
+
+let _shadowingTopic = '';
+
+async function showShadowingTopics() {
+  const area = $('shadowingTopics');
+  area.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
-    const data = await API.getReading(day, currentUser.id);
-    $('readingContent').innerHTML = `
-      <div class="card"><div class="card-header"><h3 class="card-title">${data.title}</h3><span class="badge badge-algo">${data.category || ''}</span></div>
-        <div class="tts-controls"><button class="btn btn-sm btn-primary" onclick="speakText(document.querySelector('.passage-content').textContent)">🔊 Listen to passage</button>
-          <div class="speed-selector"><button class="speed-btn" onclick="window._ttsRate=0.6;this.parentElement.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">0.6x</button>
-          <button class="speed-btn active" onclick="window._ttsRate=0.8;this.parentElement.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">0.8x</button>
-          <button class="speed-btn" onclick="window._ttsRate=1.0;this.parentElement.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">1.0x</button></div>
-          <button class="btn btn-sm btn-secondary" onclick="speechSynthesis.cancel()">⏹ Stop</button></div>
-        <div class="passage-content">${data.content}</div>
-      </div>
-      <div class="card"><h3 class="card-title mb-16">📝 Comprehension Questions</h3>
-        ${data.questions.map((q, i) => `<div class="quiz-question" id="rq-${i}">
-          <h4>Q${i + 1}. ${q.q}</h4>
-          <div class="quiz-options">${q.options.map((opt, j) => `
-            <label class="quiz-option" id="ropt-${i}-${j}" onclick="checkReading(${i},${j},${q.answer},${q.options.length})"><span>${opt}</span></label>`).join('')}
-          </div></div>`).join('')}
-        <div id="readingScore" class="hidden text-center mt-24"></div>
+    const topics = await API.getShadowingTopics();
+    area.innerHTML = `<div class="story-topic-grid">${topics.map(tp => {
+      const safe = tp.name.replace(/'/g, "\\'");
+      return `<div class="story-topic-card" onclick="loadShadowingByTopic('${safe}')">
+        <div class="story-topic-icon">${tp.icon || '🎬'}</div>
+        <h3>${escHtml(tp.name)}</h3>
+        <span>${tp.count || 0} video</span>
       </div>`;
-    window._readingTotal = data.questions.length;
-    window._readingCorrect = 0;
-    window._readingDone = 0;
-  } catch (e) { $('readingContent').innerHTML = '<p style="color:var(--text-muted)">No passage available for this day.</p>'; }
+    }).join('')}</div>`;
+    if (!_shadowingTopic && topics.length) loadShadowingByTopic(topics[0].name);
+  } catch (e) {
+    area.innerHTML = '';
+    loadYouTubeList();
+  }
+}
+
+function loadShadowingByTopic(topic) {
+  _shadowingTopic = topic;
+  loadYouTubeList(topic);
+}
+
+async function renderReading() {
+  const mc = $('mainContent');
+  mc.innerHTML = `${pageHeader(t('read.title'))}<div id="readingContent"><div class="loading"><div class="spinner"></div></div></div>`;
+  loadStoriesByTopic('IT');
+}
+
+async function showStoryTopics() {
+  loadStoriesByTopic('IT');
+}
+
+async function loadStoriesByTopic(topic) {
+  currentStoryTopic = topic;
+  const area = $('readingContent');
+  area.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const stories = await API.getReadingList(topic);
+    if (!stories.length) {
+      area.innerHTML = `<button class="btn btn-sm btn-secondary" style="margin-bottom:16px" onclick="showStoryTopics()">← ${t('read.back')}</button>
+        <p style="color:var(--text-muted)">${t('read.no.passage')}</p>`;
+      return;
+    }
+    area.innerHTML = `
+      <h2 style="font-size:20px;font-weight:800;color:var(--green-800);margin-bottom:16px">💻 ${escHtml(topic)}</h2>
+      <div class="vocab-grid">${stories.map(s => `
+        <div class="card" style="cursor:pointer" onclick="openStory(${s.id})">
+          <h3 style="font-size:16px;font-weight:700;margin-bottom:8px">${escHtml(s.title)}</h3>
+        </div>`).join('')}</div>`;
+  } catch (e) {
+    area.innerHTML = `<p style="color:var(--text-muted)">${t('read.no.passage')}</p>`;
+  }
+}
+
+async function openStory(id) {
+  const area = $('readingContent');
+  area.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const data = await API.getReadingStory(id);
+    const vocab = await API.getAllVocab(data.category, currentUser.id).catch(() => []);
+    const passage = buildBilingualPassage(data.content, vocab);
+    area.innerHTML = `
+      <button class="btn btn-sm btn-secondary" style="margin-bottom:16px" onclick="loadStoriesByTopic('${(data.category || currentStoryTopic).replace(/'/g, "\\'")}')">← ${t('read.back')}</button>
+      <div class="card">
+        <div class="card-header"><h3 class="card-title">${escHtml(data.title)}</h3></div>
+        <div class="bilingual-passage">${passage}</div>
+      </div>`;
+  } catch (e) {
+    area.innerHTML = `<p style="color:var(--text-muted)">${t('read.no.passage')}</p>`;
+  }
 }
 
 function speakText(text) {
@@ -1011,19 +1189,14 @@ function showListeningTab(tab) {
 
 async function loadYouTubeList(category) {
   try {
-    const url = '/api/youtube-listening' + (category ? '?category=' + category : '');
+    const cat = category || _shadowingTopic || '';
+    const url = '/api/youtube-listening' + (cat ? '?category=' + encodeURIComponent(cat) : '');
     const res = await fetch(url);
     const videos = await res.json();
-    const levelColors = { beginner: '#22c55e', intermediate: '#f59e0b', advanced: '#ef4444' };
-    const catIcons = { 'conversation': '💬', 'tech-interview': '🎯', 'business': '💼', 'pronunciation': '🗣️', 'tech-conversation': '💻' };
+    const levelColors = { 'Mới bắt đầu': '#22c55e', 'Trung cấp': '#f59e0b', 'Nâng cao': '#ef4444', beginner: '#22c55e', intermediate: '#f59e0b', advanced: '#ef4444' };
+    const catIcons = { 'Hội thoại': '💬', 'Công sở': '💼', 'IT': '💻' };
     $('ytListArea').innerHTML = `
-      <div class="category-filter" style="margin-bottom:16px">
-        <button class="filter-btn ${!category?'active':''}" onclick="loadYouTubeList()">📋 All</button>
-        <button class="filter-btn ${category==='conversation'?'active':''}" onclick="loadYouTubeList('conversation')">💬 Conversation</button>
-        <button class="filter-btn ${category==='tech-conversation'?'active':''}" onclick="loadYouTubeList('tech-conversation')">💻 Tech</button>
-        <button class="filter-btn ${category==='tech-interview'?'active':''}" onclick="loadYouTubeList('tech-interview')">🎯 Interview</button>
-        <button class="filter-btn ${category==='business'?'active':''}" onclick="loadYouTubeList('business')">💼 Business</button>
-      </div>
+      ${cat ? `<button class="btn btn-sm btn-secondary" style="margin-bottom:12px" onclick="_shadowingTopic='';showShadowingTopics()">← Tất cả chủ đề</button>` : ''}
       <div class="vocab-grid">${videos.map(v => `
         <div class="card" style="cursor:pointer;transition:transform .2s" onmouseenter="this.style.transform='translateY(-3px)'" onmouseleave="this.style.transform=''" onclick="openYouTubeExercise(${v.id})">
           <div style="position:relative;margin:-20px -20px 12px;border-radius:12px 12px 0 0;overflow:hidden;background:#000;height:140px;display:flex;align-items:center;justify-content:center">
@@ -1032,11 +1205,11 @@ async function loadYouTubeList(category) {
           </div>
           <h3 style="font-size:15px;font-weight:700;margin-bottom:6px">${v.title}</h3>
           <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="color:var(--text-muted);font-size:13px">${catIcons[v.category]||'🎧'} ${v.category} • Day ${v.day_number}</span>
-            <span class="badge" style="background:${levelColors[v.level]}20;color:${levelColors[v.level]}">${v.level}</span>
+            <span style="color:var(--text-muted);font-size:13px">${catIcons[v.category]||'🎧'} ${v.category}</span>
+            <span class="badge" style="background:${levelColors[v.level]||'#94a3b8'}20;color:${levelColors[v.level]||'#64748b'}">${v.level}</span>
           </div>
         </div>`).join('')}</div>`;
-  } catch(e) { $('ytListArea').innerHTML = '<p>Error loading videos</p>'; }
+  } catch(e) { $('ytListArea').innerHTML = '<p>Lỗi tải video</p>'; }
 }
 
 async function openYouTubeExercise(id) {
@@ -1048,7 +1221,7 @@ async function openYouTubeExercise(id) {
     $('ytListArea').innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <h2 style="font-size:20px;font-weight:800">${v.title}</h2>
-        <button class="btn btn-sm btn-secondary" onclick="loadYouTubeList()">← Back</button>
+        <button class="btn btn-sm btn-secondary" onclick="loadYouTubeList()">← ${t('video.back')}</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px" id="ytStudyLayout">
         <div>
@@ -1062,7 +1235,7 @@ async function openYouTubeExercise(id) {
             <div style="position:absolute; bottom:0; left:0; width:100%; height:15%; cursor:default; z-index:10;"></div>
             <!-- Eagle English branding - fully covers YouTube logo area -->
             <div class="yt-eagle-brand" style="position:absolute; bottom:0; right:0; z-index:15; background:rgba(22,163,74,0.95); color:white; padding:12px 24px; border-radius:12px 0 0 0; font-size:15px; font-weight:800; letter-spacing:0.5px; display:flex; align-items:center; gap:8px; pointer-events:none; min-width:220px; justify-content:center;">
-              <img src="/img/mascot.png" style="width:26px;height:26px;border-radius:50%;" alt="">🦅 Eagle English
+              <img src="/img/mascot.png" style="width:26px;height:26px;border-radius:50%;" alt="">🎬 Shadowing
             </div>
             <!-- Custom fullscreen button -->
             <button onclick="ytToggleFullscreen()" style="position:absolute; bottom:6px; left:8px; z-index:15; background:rgba(0,0,0,0.5); color:white; border:none; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:16px; backdrop-filter:blur(4px);" title="Fullscreen">⛶</button>
@@ -1243,9 +1416,9 @@ async function loadListeningDay(day) {
     $('listeningContent').innerHTML = `
       <div class="card"><div class="card-header"><h3 class="card-title">🎧 ${data.title}</h3><span class="badge badge-data">${data.category || ''}</span></div>
         <div class="tts-controls">
-          <button class="btn btn-sm btn-primary" onclick="speakDialogue()">▶ Play Dialogue</button>
-          <button class="btn btn-sm btn-secondary" onclick="speechSynthesis.cancel()">⏹ Stop</button>
-          <button class="btn btn-sm btn-secondary" id="showTranscript" onclick="document.getElementById('dialogueText').classList.toggle('hidden');this.textContent=this.textContent.includes('Show')?'Hide Transcript':'Show Transcript'">Show Transcript</button>
+          <button class="btn btn-sm btn-primary" onclick="speakDialogue()">${t('listen.play')}</button>
+          <button class="btn btn-sm btn-secondary" onclick="speechSynthesis.cancel()">${t('listen.stop')}</button>
+          <button class="btn btn-sm btn-secondary" id="showTranscript" onclick="document.getElementById('dialogueText').classList.toggle('hidden');this.textContent=document.getElementById('dialogueText').classList.contains('hidden')? '${t('listen.show')}':'${t('listen.hide')}'">${t('listen.show')}</button>
         </div>
         <div class="dialogue-text hidden" id="dialogueText" style="padding-top:12px;">
           ${data.dialogue.split('\n').filter(l=>l.trim()).map(l => {
@@ -1257,7 +1430,7 @@ async function loadListeningDay(day) {
           }).join('')}
         </div>
       </div>
-      <div class="card"><h3 class="card-title mb-16">📝 Questions</h3>
+      <div class="card"><h3 class="card-title mb-16">${t('listen.questions')}</h3>
         ${data.questions.map((q, i) => `<div class="quiz-question" id="lq-${i}"><h4>Q${i + 1}. ${q.q}</h4>
           <div class="quiz-options">${q.options.map((opt, j) => `
             <label class="quiz-option" id="lopt-${i}-${j}" onclick="checkListening(${i},${j},${q.answer},${q.options.length})"><span>${opt}</span></label>`).join('')}
@@ -1268,7 +1441,7 @@ async function loadListeningDay(day) {
     window._listenTotal = data.questions.length;
     window._listenCorrect = 0;
     window._listenDone = 0;
-  } catch (e) { $('listeningContent').innerHTML = '<p style="color:var(--text-muted)">No dialogue available for this day.</p>'; }
+  } catch (e) { $('listeningContent').innerHTML = `<p style="color:var(--text-muted)">${t('listen.no.dialogue')}</p>`; }
 }
 
 function speakDialogue() {
@@ -2100,7 +2273,8 @@ async function doCheckin() {
     } else {
       currentUser.streak_days = result.streak;
       localStorage.setItem('user', JSON.stringify(currentUser));
-      $('userStreak').textContent = `🔥 ${result.streak} ${t('dash.streak.days')}`;
+      const streakEl = $('userStreak');
+      if (streakEl) streakEl.textContent = `🔥 ${result.streak} ${t('dash.streak.days')}`;
       toast(`🎉 ${t('checkin.success') || 'Checked in!'} 🔥 ${result.streak} ${t('dash.streak.days')}`, 'success');
 
       // Show streak milestone popup
@@ -2325,12 +2499,15 @@ async function renderProfile() {
   const mc = $('mainContent');
   mc.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
-    // HIDDEN (out of scope — video notes):
-    // const res = await fetch('/api/video-notes/' + currentUser.id);
-    // const notes = await res.json();
+    let profile = currentUser;
+    try {
+      profile = await API.request('GET', `/api/auth/profile/${currentUser.id}`);
+      currentUser = { ...currentUser, ...profile };
+      localStorage.setItem('user', JSON.stringify(currentUser));
+    } catch (_) {}
     const notes = [];
-    
     const avatarUrl = currentUser.avatar || '/img/mascot.png';
+    const fmtDate = (d) => d ? new Date(d).toLocaleString('vi-VN') : '—';
     
     mc.innerHTML = `
       <div class="page-header">
@@ -2342,13 +2519,13 @@ async function renderProfile() {
           <div style="background:linear-gradient(135deg, #16a34a 0%, #15803d 100%); color:white; border-radius:16px; padding:32px 24px; text-align:center; box-shadow:0 8px 24px rgba(22,163,74,0.25)">
              <div style="position:relative; display:inline-block; margin-bottom:16px">
                <img src="${avatarUrl}" alt="Avatar" id="profileAvatarImg" style="width:88px; height:88px; border-radius:50%; border:4px solid rgba(255,255,255,0.4); object-fit:cover; display:block; background:white;" />
-               <label for="avatarUpload" style="position:absolute;bottom:0;right:0;width:30px;height:30px;border-radius:50%;background:white;color:var(--leaf);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-size:14px" title="${t('profile.change.avatar') || 'Change avatar'}">📷</label>
+               <label for="avatarUpload" style="position:absolute;bottom:0;right:0;width:30px;height:30px;border-radius:50%;background:white;color:var(--leaf);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2);font-size:14px" title="${t('profile.change.avatar') || 'Đổi ảnh'}">📷</label>
                <input type="file" id="avatarUpload" accept="image/*" style="display:none" onchange="uploadAvatar(this)" />
              </div>
              <h2 style="margin:0 0 8px 0; font-size:22px; font-weight:700">${currentUser.display_name||currentUser.username}</h2>
-             <p style="opacity:0.9; margin:0; font-size:14px">📊 ${t('profile.level')}: ${currentUser.english_level || 'Intermediate'}</p>
-             <p style="opacity:0.9; margin:4px 0 0; font-size:14px">🔥 ${currentUser.streak_days||0} ${t('profile.streak')}</p>
-             <p style="opacity:0.9; margin:4px 0 0; font-size:13px">📧 ${currentUser.email || 'Not set'}</p>
+             <p style="opacity:0.9; margin:4px 0 0; font-size:13px">📧 ${currentUser.email || 'Chưa có email'}</p>
+             <p style="opacity:0.9; margin:8px 0 0; font-size:13px">📅 ${t('profile.registered')}: ${fmtDate(currentUser.created_at)}</p>
+             <p style="opacity:0.9; margin:4px 0 0; font-size:13px">🕐 ${t('profile.last.login')}: ${fmtDate(currentUser.last_login_at)}</p>
           </div>
           
           <div style="background:white;border-radius:12px;padding:20px;margin-top:16px;border:1px solid var(--border)">

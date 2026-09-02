@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Admin Dashboard - Eagle English</title>
+  <title>Admin - English Eight</title>
   <link rel="stylesheet" href="css/admin.css">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -42,6 +42,12 @@
     .filter-bar { display:flex;gap:1rem;margin-bottom:1.5rem; }
     .filter-bar select,.filter-bar input { padding:0.6rem 1rem;border:1px solid var(--border-color);border-radius:8px;outline:none; }
     .filter-bar input { flex:1; }
+    .admin-topic-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:1rem; }
+    .admin-topic-card { background:white; border:1px solid var(--border-color); border-radius:12px; padding:1.5rem 1rem; text-align:center; cursor:pointer; transition:transform .15s, box-shadow .15s; }
+    .admin-topic-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,0.08); border-color:#4f46e5; }
+    .admin-topic-icon { font-size:2rem; margin-bottom:0.5rem; }
+    .admin-topic-card h3 { font-size:0.95rem; margin-bottom:4px; }
+    .admin-topic-card span { color:var(--text-muted); font-size:0.8rem; }
   </style>
 </head>
 <body>
@@ -64,23 +70,16 @@
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <i class="fa-solid fa-feather-pointed"></i>
-        <h2>Eagle Admin</h2>
+        <h2>Admin</h2>
       </div>
       <ul class="nav-links">
-        <li class="active" data-view="dashboard"><i class="fa-solid fa-chart-line"></i> Dashboard</li>
-        <li data-view="users"><i class="fa-solid fa-users"></i> Người Dùng</li>
-        <li data-view="vocabulary"><i class="fa-solid fa-book-open"></i> Từ Vựng</li>
-        <li data-view="grammar"><i class="fa-solid fa-graduation-cap"></i> Ngữ Pháp & Lý Thuyết</li>
-        <li data-view="exercises"><i class="fa-solid fa-pen-to-square"></i> Bài Đọc (Reading)</li>
-        <li data-view="listening"><i class="fa-solid fa-headphones"></i> Listening</li>
-        <!-- HIDDEN (out of scope): Speaking / Writing / Video / Topics / Roles
-        <li data-view="speaking"><i class="fa-solid fa-microphone-lines"></i> Speaking</li>
-        <li data-view="writing"><i class="fa-solid fa-file-pen"></i> Writing</li>
-        <li data-view="videos"><i class="fa-solid fa-video"></i> Video (StudyPhim)</li>
-        <li data-view="topics"><i class="fa-solid fa-tags"></i> Chủ Đề</li>
-        <li data-view="roles"><i class="fa-solid fa-user-shield"></i> Phân Quyền</li>
-        -->
-        <li class="logout" onclick="adminLogout()"><i class="fa-solid fa-right-from-bracket"></i> Đăng Xuất</li>
+        <li class="active" data-view="dashboard"><i class="fa-solid fa-chart-line"></i> Tổng quan</li>
+        <li data-view="users"><i class="fa-solid fa-users"></i> Người dùng</li>
+        <li data-view="vocabulary"><i class="fa-solid fa-book-open"></i> Từ vựng</li>
+        <li data-view="grammar"><i class="fa-solid fa-graduation-cap"></i> Ngữ pháp</li>
+        <li data-view="exercises"><i class="fa-solid fa-book-open-reader"></i> Đọc truyện</li>
+        <li data-view="shadowing"><i class="fa-solid fa-video"></i> Shadowing</li>
+        <li class="logout" onclick="adminLogout()"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</li>
       </ul>
     </aside>
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="document.getElementById('sidebar').classList.remove('mobile-open');this.style.display='none'"></div>
@@ -91,7 +90,6 @@
         <div class="toggle-btn" id="toggle-sidebar"><i class="fa-solid fa-bars"></i></div>
         <div class="search-bar"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Tìm kiếm..."></div>
         <div class="profile-area">
-          <div class="notification"><i class="fa-regular fa-bell"></i><span class="badge" id="notif-count">0</span></div>
           <div class="profile-info">
             <img src="https://ui-avatars.com/api/?name=Admin&background=4f46e5&color=fff" alt="Admin">
             <span id="admin-name">Admin</span>
@@ -102,87 +100,39 @@
       <div class="view-container">
         <!-- DASHBOARD -->
         <section class="view active" id="view-dashboard">
-          <div class="page-header"><h1>Tổng Quan Hệ Thống</h1><p>Thống kê tổng + chi tiết từng mục từ MySQL.</p></div>
+          <div class="page-header"><h1>Tổng quan</h1></div>
           <div class="stats-grid">
-            <div class="stat-card clickable" onclick="goView('users')"><div class="stat-icon users"><i class="fa-solid fa-users"></i></div><div class="stat-details"><h3>Tổng Users</h3><h2 id="stat-users">...</h2><p class="trend positive" id="stat-users-sub">—</p></div></div>
-            <div class="stat-card clickable" onclick="goView('vocabulary')"><div class="stat-icon vocab"><i class="fa-solid fa-book"></i></div><div class="stat-details"><h3>Tổng Từ Vựng</h3><h2 id="stat-vocab">...</h2><p class="trend positive" id="stat-vocab-sub">—</p></div></div>
-            <div class="stat-card clickable" onclick="goView('users')"><div class="stat-icon visits"><i class="fa-solid fa-eye"></i></div><div class="stat-details"><h3>Check-in</h3><h2 id="stat-visits">...</h2><p class="trend mixed">user_checkins</p></div></div>
-            <div class="stat-card"><div class="stat-icon tasks"><i class="fa-solid fa-list-check"></i></div><div class="stat-details"><h3>Bài Đã Làm</h3><h2 id="stat-tests">...</h2><p class="trend mixed" id="stat-tests-sub">user_progress</p></div></div>
+            <div class="stat-card clickable" onclick="goView('users')"><div class="stat-icon users"><i class="fa-solid fa-users"></i></div><div class="stat-details"><h3>Người dùng</h3><h2 id="stat-users">...</h2></div></div>
+            <div class="stat-card clickable" onclick="goView('vocabulary')"><div class="stat-icon vocab"><i class="fa-solid fa-book"></i></div><div class="stat-details"><h3>Từ vựng</h3><h2 id="stat-vocab">...</h2></div></div>
+            <div class="stat-card clickable" onclick="goView('grammar')"><div class="stat-icon" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-pen-to-square"></i></div><div class="stat-details"><h3>Ngữ pháp</h3><h2 id="stat-grammar">...</h2><p class="trend mixed" id="stat-grammar-sub">—</p></div></div>
+            <div class="stat-card clickable" onclick="goView('exercises')"><div class="stat-icon" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-book-open-reader"></i></div><div class="stat-details"><h3>Đọc truyện</h3><h2 id="stat-reading">...</h2></div></div>
+            <div class="stat-card clickable" onclick="goView('shadowing')"><div class="stat-icon" style="background:#ede9fe;color:#7c3aed"><i class="fa-solid fa-video"></i></div><div class="stat-details"><h3>Shadowing</h3><h2 id="stat-shadowing">...</h2></div></div>
           </div>
-          <div class="stats-grid">
-            <div class="stat-card clickable" onclick="goView('grammar')"><div class="stat-icon" style="background:#fef3c7;color:#d97706"><i class="fa-solid fa-pen-to-square"></i></div><div class="stat-details"><h3>Grammar Ex.</h3><h2 id="stat-grammar">...</h2></div></div>
-            <div class="stat-card clickable" onclick="goView('exercises')"><div class="stat-icon" style="background:#dbeafe;color:#2563eb"><i class="fa-solid fa-book-open-reader"></i></div><div class="stat-details"><h3>Reading</h3><h2 id="stat-reading">...</h2></div></div>
-            <div class="stat-card clickable" onclick="goView('listening')"><div class="stat-icon" style="background:#fce4ec;color:#e11d48"><i class="fa-solid fa-headphones"></i></div><div class="stat-details"><h3>Listening</h3><h2 id="stat-listening">...</h2></div></div>
-            <!-- HIDDEN: Speaking / Writing / Topics / Video
-            <div class="stat-card clickable" onclick="goView('speaking')">...</div>
-            <div class="stat-card clickable" onclick="goView('writing')">...</div>
-            <div class="stat-card clickable" onclick="goView('topics')">...</div>
-            <div class="stat-card clickable" onclick="goView('videos')">...</div>
-            -->
-          </div>
-
-          <div class="dash-detail-grid">
-            <div class="chart-box">
-              <h3><i class="fa-solid fa-calendar-check"></i> Check-in 7 ngày gần nhất</h3>
-              <div class="mock-chart bar-chart" id="dash-checkin-chart"></div>
-            </div>
-            <div class="chart-box">
-              <h3><i class="fa-solid fa-chart-pie"></i> Bài làm theo loại</h3>
-              <div id="dash-progress-types" class="dash-list"></div>
-            </div>
-          </div>
-
-          <div class="dash-detail-grid mt-4">
-            <div class="chart-box">
-              <h3><i class="fa-solid fa-book"></i> Từ vựng theo danh mục</h3>
-              <div id="dash-vocab-cats" class="dash-bars"></div>
-            </div>
-            <div class="chart-box">
-              <h3><i class="fa-solid fa-layer-group"></i> User theo trình độ</h3>
-              <div id="dash-levels" class="dash-list"></div>
-            </div>
-          </div>
-
-          <div class="dash-detail-grid mt-4">
-            <div class="chart-box">
-              <div class="flex-between" style="margin-bottom:1rem"><h3 style="margin:0"><i class="fa-solid fa-user-clock"></i> Người dùng gần đây</h3><button class="btn btn-outline" onclick="goView('users')" style="font-size:0.8rem">Xem tất cả</button></div>
-              <div class="table-container" style="border:none;box-shadow:none">
-                <table class="data-table"><thead><tr><th>Tên</th><th>Role</th><th>Level</th><th>Streak</th><th>Học gần nhất</th></tr></thead>
-                <tbody id="dash-recent-users"></tbody></table>
-              </div>
-            </div>
-            <div class="chart-box">
-              <h3><i class="fa-solid fa-bolt"></i> Hoạt động học gần đây</h3>
-              <div id="dash-recent-activity" class="dash-list"></div>
-            </div>
-          </div>
-
-          <!-- HIDDEN (out of scope): Topics / Videos detail panels -->
         </section>
 
         <!-- USERS -->
         <section class="view" id="view-users">
-          <div class="page-header"><h1>Quản Lý Người Dùng</h1><p>Dữ liệu thực từ bảng users.</p></div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Tên</th><th>Username</th><th>Role</th><th>Level</th><th>Streaks</th><th>Hành động</th></tr></thead>
-          <tbody id="users-tbody"><tr><td colspan="6" class="text-center">Đang tải...</td></tr></tbody></table></div>
+          <div class="page-header"><h1>Quản lý người dùng</h1></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Tên</th><th>Username</th><th>Vai trò</th><th>Ngày đăng ký</th><th>Quản lý</th></tr></thead>
+          <tbody id="users-tbody"><tr><td colspan="5" class="text-center">Đang tải...</td></tr></tbody></table></div>
         </section>
 
         <!-- VOCABULARY -->
         <section class="view" id="view-vocabulary">
-          <div class="page-header flex-between"><div><h1>Quản Lý Từ Vựng</h1><p>Xem / thêm / sửa / xóa từ vựng.</p></div>
+          <div class="page-header flex-between"><div><h1>Quản lý từ vựng</h1></div>
             <button class="btn btn-primary" onclick="showVocabForm()"><i class="fa-solid fa-plus"></i> Thêm Từ Mới</button></div>
           <div class="filter-bar">
             <select id="vocab-cat-filter" onchange="_vocabPage=1;loadVocabulary(1)"><option value="">Tất cả danh mục</option></select>
             <input type="text" id="vocab-search" placeholder="Tìm từ vựng..." onkeydown="if(event.key==='Enter'){_vocabPage=1;loadVocabulary(1)}" oninput="clearTimeout(window._vocabT);window._vocabT=setTimeout(()=>{_vocabPage=1;loadVocabulary(1)},400)">
           </div>
-          <div class="table-container"><table class="data-table"><thead><tr><th>Từ vựng</th><th>Loại</th><th>Nghĩa (VN)</th><th>Category</th><th>Day</th><th>Hành động</th></tr></thead>
-          <tbody id="vocab-tbody"><tr><td colspan="6" class="text-center">Đang tải...</td></tr></tbody></table></div>
+          <div class="table-container"><table class="data-table"><thead><tr><th>Từ vựng</th><th>Loại</th><th>Nghĩa (VN)</th><th>Danh mục</th><th>Thao tác</th></tr></thead>
+          <tbody id="vocab-tbody"><tr><td colspan="5" class="text-center">Đang tải...</td></tr></tbody></table></div>
           <div id="vocab-pager" style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;gap:1rem;flex-wrap:wrap"></div>
         </section>
 
         <!-- GRAMMAR -->
         <section class="view" id="view-grammar">
-          <div class="page-header"><h1>Ngữ Pháp: Lý Thuyết & Bài Tập</h1><p>Xem / thêm / sửa / xóa lý thuyết và câu hỏi.</p></div>
+          <div class="page-header"><h1>Ngữ pháp: Lý thuyết & Bài tập</h1></div>
           <div class="tabs">
             <button class="tab-btn active" onclick="switchGrammarTab('lessons')">📖 Lý Thuyết</button>
             <button class="tab-btn" onclick="switchGrammarTab('exercises')">📝 Bài Tập</button>
@@ -191,18 +141,32 @@
           <div id="grammar-exercises-area" style="display:none"></div>
         </section>
 
-        <!-- READING -->
+        <!-- READING (Đọc truyện — theo chủ đề IT, đồng bộ với app người dùng) -->
         <section class="view" id="view-exercises">
-          <div class="page-header flex-between"><div><h1>Bài Đọc Hiểu (Reading)</h1><p>Xem / thêm / sửa / xóa bài đọc.</p></div>
-            <button class="btn btn-primary" onclick="showReadingForm()"><i class="fa-solid fa-plus"></i> Thêm Bài Đọc</button></div>
+          <div class="page-header flex-between">
+            <div>
+              <h1>Đọc truyện</h1>
+              <p class="text-muted" style="font-size:0.9rem;margin-top:4px">Truyện song ngữ IT — hover xem nghĩa tiếng Việt</p>
+            </div>
+            <button class="btn btn-primary" onclick="showReadingForm()"><i class="fa-solid fa-plus"></i> Thêm truyện</button>
+          </div>
+          <div id="reading-breadcrumb" style="margin-bottom:1rem"></div>
           <div id="reading-list"></div>
         </section>
 
-        <!-- LISTENING -->
-        <section class="view" id="view-listening">
-          <div class="page-header flex-between"><div><h1>Bài Nghe (Listening)</h1><p>Xem / thêm / sửa / xóa bài nghe.</p></div>
-            <button class="btn btn-primary" onclick="showListeningForm()"><i class="fa-solid fa-plus"></i> Thêm Bài Nghe</button></div>
+        <section class="view" id="view-listening" style="display:none!important" aria-hidden="true">
           <div id="listening-list"></div>
+        </section>
+
+        <section class="view" id="view-shadowing">
+          <div class="page-header flex-between">
+            <div>
+              <h1>Shadowing</h1>
+              <p class="text-muted" style="font-size:0.9rem;margin-top:4px">Quản lý video luyện nghe — đồng bộ với phần Shadowing của người dùng</p>
+            </div>
+            <button class="btn btn-primary" onclick="showImportVideoModal()"><i class="fa-solid fa-plus"></i> Thêm video</button>
+          </div>
+          <div id="video-area"></div>
         </section>
 
         <!-- HIDDEN (out of scope): Speaking / Writing / Videos / Topics / Roles -->
@@ -216,7 +180,7 @@
         <!-- Keep DOM shells so old JS does not crash if called; hide via CSS class -->
         <section class="view" id="view-speaking" style="display:none!important" aria-hidden="true"></section>
         <section class="view" id="view-writing" style="display:none!important" aria-hidden="true"></section>
-        <section class="view" id="view-videos" style="display:none!important" aria-hidden="true"><div id="video-area"></div></section>
+        <section class="view" id="view-videos" style="display:none!important" aria-hidden="true"></section>
         <section class="view" id="view-topics" style="display:none!important" aria-hidden="true"><div id="topics-list"></div></section>
         <section class="view" id="view-roles" style="display:none!important" aria-hidden="true"><div class="roles-grid" id="roles-grid"></div></section>
       </div>
@@ -330,12 +294,15 @@
     });
   }
 
+  function fmtDateTime(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleString('vi-VN');
+  }
+
   function loadView(v) {
-    // SCOPE: dashboard, users, vocabulary, grammar, reading(exercises), listening
-    // HIDDEN: speaking, writing, videos, topics, roles
-    const allowed = ['dashboard', 'users', 'vocabulary', 'grammar', 'exercises', 'listening'];
+    const allowed = ['dashboard', 'users', 'vocabulary', 'grammar', 'exercises', 'shadowing'];
     if (!allowed.includes(v)) v = 'dashboard';
-    const m = { dashboard:loadDashboard, users:loadUsers, vocabulary:loadVocabulary, grammar:loadGrammar, exercises:loadReading, listening:loadListening };
+    const m = { dashboard:loadDashboard, users:loadUsers, vocabulary:loadVocabulary, grammar:loadGrammar, exercises:loadReading, shadowing:loadVideos };
     (m[v] || loadDashboard)();
   }
 
@@ -349,99 +316,24 @@
     fetch('/api/admin/dashboard').then(r=>r.json()).then(d => {
       setText('stat-users', d.totalUsers);
       setText('stat-vocab', d.totalVocab);
-      setText('stat-visits', d.totalVisits);
-      setText('stat-tests', d.totalTests);
-      setText('stat-grammar', d.totalGrammar);
+      const lessons = d.totalGrammarLessons || 0;
+      const exercises = d.totalGrammar || 0;
+      setText('stat-grammar', lessons + exercises);
+      const sub = document.getElementById('stat-grammar-sub');
+      if (sub) sub.textContent = `${lessons} lý thuyết · ${exercises} bài tập`;
       setText('stat-reading', d.totalReading);
-      setText('stat-listening', d.totalListening);
-      // HIDDEN stats: speaking, writing, topics, videos
-      // setText('stat-speaking', d.totalSpeaking);
-      // setText('stat-writing', d.totalWriting || 0);
-      // setText('stat-topics', d.totalTopics || 0);
-      // setText('stat-videos', d.totalVideos || 0);
-
-      const ur = d.usersByRole || {};
-      setText('stat-users-sub', `${ur.admins || 0} admin · ${ur.users || 0} người dùng`);
-      setText('stat-vocab-sub', `${d.vocabLearned || 0} đã học bởi user`);
-      const typeCount = (d.progressByType || []).length;
-      setText('stat-tests-sub', typeCount ? `${typeCount} loại bài` : 'user_progress');
-
-      // Check-in chart
-      const checks = d.weeklyCheckins || [];
-      const maxC = Math.max(1, ...checks.map(c => Number(c.count) || 0));
-      const chart = document.getElementById('dash-checkin-chart');
-      if (!checks.length) {
-        chart.innerHTML = '<p class="text-muted" style="align-self:center">Chưa có check-in.</p>';
-      } else {
-        chart.innerHTML = checks.map(c => {
-          const h = Math.max(8, Math.round((Number(c.count) / maxC) * 160));
-          const label = String(c.checkin_date).slice(5); // MM-DD
-          return `<div class="bar" style="height:${h}px" title="${c.count} check-in"><span>${label}</span></div>`;
-        }).join('');
-      }
-
-      // Progress by type
-      const progEl = document.getElementById('dash-progress-types');
-      const progs = d.progressByType || [];
-      progEl.innerHTML = progs.length ? progs.map(p => `
-        <div class="dash-row">
-          <span class="dash-label">${esc(p.activity_type)}</span>
-          <span class="dash-meta">${p.count} bài · TB ${p.avg_score ?? '—'}</span>
-        </div>`).join('') : '<p class="text-muted">Chưa có bài làm.</p>';
-
-      // Vocab by category
-      const cats = d.vocabByCategory || [];
-      const maxV = Math.max(1, ...cats.map(c => Number(c.count) || 0));
-      document.getElementById('dash-vocab-cats').innerHTML = cats.length ? cats.map(c => `
-        <div class="dash-bar-row">
-          <span class="dash-label">${esc(c.category)}</span>
-          <div class="dash-bar-track"><div class="dash-bar-fill" style="width:${Math.round(Number(c.count)/maxV*100)}%"></div></div>
-          <span class="dash-meta">${c.count}</span>
-        </div>`).join('') : '<p class="text-muted">Chưa có từ vựng.</p>';
-
-      // Levels
-      const levels = d.levelBreakdown || [];
-      document.getElementById('dash-levels').innerHTML = levels.length ? levels.map(l => `
-        <div class="dash-row">
-          <span class="dash-label">${esc(l.level)}</span>
-          <span class="dash-meta">${l.count} users</span>
-        </div>`).join('') : '<p class="text-muted">—</p>';
-
-      // Recent users
-      const ru = d.recentUsers || [];
-      document.getElementById('dash-recent-users').innerHTML = ru.length ? ru.map(u => {
-        const isAdmin = u.role === 'role_admin';
-        return `<tr>
-          <td><strong>${esc(u.display_name || u.username)}</strong><div class="text-muted" style="font-size:0.75rem">@${esc(u.username)}</div></td>
-          <td style="color:${isAdmin?'#f59e0b':'#10b981'};font-weight:600">${isAdmin?'Admin':'Người dùng'}</td>
-          <td>${esc(u.english_level || '—')}</td>
-          <td>🔥 ${u.streak_days || 0}</td>
-          <td class="text-muted">${u.last_study_date ? String(u.last_study_date).slice(0,10) : '—'}</td>
-        </tr>`;
-      }).join('') : '<tr><td colspan="5" class="text-center">Chưa có user.</td></tr>';
-
-      // Recent activity
-      const acts = d.recentActivity || [];
-      document.getElementById('dash-recent-activity').innerHTML = acts.length ? acts.map(a => `
-        <div class="dash-row">
-          <span class="dash-label">${esc(a.display_name || a.username || 'User')} · <em>${esc(a.activity_type)}</em></span>
-          <span class="dash-meta">${a.score != null ? a.score + ' điểm' : '—'}</span>
-        </div>`).join('') : '<p class="text-muted">Chưa có hoạt động.</p>';
-
-      // HIDDEN: topics / videos panels
-      // document.getElementById('dash-topics')...
-      // document.getElementById('dash-videos')...
+      setText('stat-shadowing', d.totalShadowing || 0);
     }).catch(e => console.error(e));
   }
 
   // ==================== USERS ====================
   function loadUsers() {
     const tbody = document.getElementById('users-tbody');
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Đang tải...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center">Đang tải...</td></tr>';
     fetch(`/api/admin/users?limit=${LIST_LIMIT}`).then(r=>r.json()).then(res => {
       const users = asList(res);
       tbody.innerHTML = '';
-      if (!users.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center">Chưa có user.</td></tr>'; return; }
+      if (!users.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-center">Chưa có user.</td></tr>'; return; }
       users.forEach(u => {
         const isAdmin = u.role === 'role_admin';
         const rn = isAdmin ? 'Admin' : 'Người dùng';
@@ -450,17 +342,16 @@
           <td><strong>${esc(u.display_name||u.username)}</strong></td>
           <td class="text-muted">@${esc(u.username)}</td>
           <td style="color:${rc};font-weight:700">${rn}</td>
-          <td>${esc(u.english_level||'N/A')}</td>
-          <td>🔥 ${u.streak_days||0}</td>
+          <td>${fmtDateTime(u.created_at)}</td>
           <td>
             <select onchange="updateRole('${u.id}',this.value)" style="padding:4px 8px;border-radius:6px;border:1px solid #e5e7eb;font-size:0.8rem">
               <option value="user" ${!isAdmin?'selected':''}>Người dùng</option>
               <option value="role_admin" ${isAdmin?'selected':''}>Admin</option>
             </select>
-            <button class="btn btn-icon danger" onclick="deleteUser('${u.id}')"><i class="fa-solid fa-trash"></i></button>
+            <button class="btn btn-icon danger" onclick="deleteUser('${u.id}')" title="Xóa"><i class="fa-solid fa-trash"></i></button>
           </td></tr>`;
       });
-    }).catch(e => { tbody.innerHTML = `<tr><td colspan="6" class="text-center" style="color:red">Lỗi: ${esc(e.message)}</td></tr>`; });
+    }).catch(e => { tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="color:red">Lỗi: ${esc(e.message)}</td></tr>`; });
   }
 
   function updateRole(id, role) {
@@ -543,22 +434,34 @@
     fetch(`/api/admin/topics/${id}`,{method:'DELETE'}).then(r=>r.json()).then(d=>{ if(d.error){alert(d.error);return;} loadTopics();loadDashboard(); });
   }
 
-  // ==================== VIDEOS ====================
-  function loadVideos() {
+  // ==================== VIDEOS (Shadowing) ====================
+  const SHADOWING_CAT_LABELS = {
+    'Hội thoại': '💬 Hội thoại',
+    'Công sở': '💼 Công sở',
+    'IT': '💻 IT'
+  };
+
+  function loadVideos(category) {
     const area = document.getElementById('video-area');
     area.innerHTML = '<div style="display:flex;justify-content:center;padding:2rem"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>';
-    fetch('/api/youtube-listening').then(r=>r.json()).then(res => {
-      const videos = asList(res);
-      area.innerHTML = '';
-      if(!videos.length) { area.innerHTML = '<div class="empty-state"><p>Chưa có video. Nhấn "Import Video" để thêm.</p></div>'; return; }
-      area.innerHTML = `<p class="text-muted" style="margin-bottom:1rem">${videos.length} video</p>`;
+    fetch('/api/shadowing/topics').then(r => r.json()).then(topics => {
+      const filters = `<div class="filter-bar" style="margin-bottom:1rem;flex-wrap:wrap">
+        <button class="btn btn-sm ${!category?'btn-primary':'btn-outline'}" onclick="loadVideos()">Tất cả</button>
+        ${topics.map(tp => `<button class="btn btn-sm ${category===tp.name?'btn-primary':'btn-outline'}" onclick="loadVideos('${tp.name.replace(/'/g,"\\'")}')">${tp.icon||''} ${tp.name}</button>`).join('')}
+      </div>`;
+      const url = '/api/youtube-listening' + (category ? '?category=' + encodeURIComponent(category) : '');
+      return fetch(url).then(r => r.json()).then(videos => ({ videos, filters }));
+    }).then(({ videos, filters }) => {
+      if(!videos.length) { area.innerHTML = filters + '<div class="empty-state"><p>Chưa có video. Nhấn "Thêm video" để import từ YouTube.</p></div>'; return; }
+      area.innerHTML = filters + `<p class="text-muted" style="margin-bottom:1rem">${videos.length} video</p>`;
       videos.forEach(v => {
+        const catLabel = SHADOWING_CAT_LABELS[v.category] || v.category || '—';
         area.innerHTML += `<div class="admin-item" style="display:flex; justify-content:space-between; align-items:center;">
           <div style="display:flex; gap:16px;">
             <img src="https://img.youtube.com/vi/${esc(v.youtube_id)}/mqdefault.jpg" style="width:120px; height:68px; border-radius:8px; object-fit:cover;" />
             <div class="item-body">
               <h4 style="margin:0 0 4px 0">${esc(v.title)}</h4>
-              <p style="color:#666; font-size:13px; margin:0">${esc(v.category)} | ${esc(v.level)} | Day ${v.day_number} | Thời lượng: ${esc(v.duration||'')}</p>
+              <p style="color:#666; font-size:13px; margin:0">${catLabel} · ${esc(v.level)} · ${esc(v.duration||'')}</p>
             </div>
           </div>
           <div class="item-actions">
@@ -571,14 +474,18 @@
 
   function showImportVideoModal() {
     openModal(`<button class="close-modal" onclick="closeModal()">✕</button>
-      <h2>Import Video YouTube</h2>
-      <p style="font-size:13px; color:#666; margin-bottom:12px;">Tool tự động lấy Sub Tiếng Anh và dịch sang Tiếng Việt. Chỉ áp dụng Video có sẵn phụ đề EN, nên độ dài tầm 2-5p để test nhanh!</p>
-      <div class="form-group"><label>YouTube ID hoặc URL *</label><input id="mv-id" placeholder="VD: lCAg8Ybm2us, hoặc https://www.youtube.com/watch?v=..."></div>
-      <div class="form-group"><label>Tiêu đề (Để trống sẽ dùng Title gốc hoặc "Imported Video")</label><input id="mv-title" placeholder="Tùy chọn"></div>
+      <h2>Thêm Video Shadowing</h2>
+      <p style="font-size:13px; color:#666; margin-bottom:12px;">Dán link YouTube có phụ đề tiếng Anh. Hệ thống tự lấy phụ đề và dịch sang tiếng Việt.</p>
+      <div class="form-group"><label>Link YouTube *</label><input id="mv-id" placeholder="VD: https://www.youtube.com/watch?v=..."></div>
+      <div class="form-group"><label>Tiêu đề (để trống sẽ tự lấy từ YouTube)</label><input id="mv-title" placeholder="Tùy chọn"></div>
       <div style="display:flex;gap:12px">
-        <div class="form-group" style="flex:1"><label>Category</label><input id="mv-cat" value="technical code"></div>
-        <div class="form-group" style="flex:1"><label>Level</label><select id="mv-level"><option>beginner</option><option selected>intermediate</option><option>advanced</option></select></div>
-        <div class="form-group" style="width:80px"><label>Day</label><input type="number" id="mv-day" value="1"></div>
+        <div class="form-group" style="flex:1"><label>Chủ đề</label>
+          <select id="mv-cat">
+            <option value="Hội thoại">💬 Hội thoại</option>
+            <option value="Công sở">💼 Công sở</option>
+            <option value="IT">💻 IT</option>
+          </select></div>
+        <div class="form-group" style="flex:1"><label>Độ khó</label><select id="mv-level"><option>Mới bắt đầu</option><option selected>Trung cấp</option><option>Nâng cao</option></select></div>
       </div>
       <div class="modal-actions" style="margin-top:24px">
         <button class="btn btn-outline" onclick="closeModal()">Hủy</button>
@@ -596,7 +503,7 @@
 
     const body = {
       videoId: vid,
-      title: gv('mv-title'), category: gv('mv-cat'), level: gv('mv-level'), day_number: parseInt(gv('mv-day'))||1
+      title: gv('mv-title'), category: gv('mv-cat'), level: gv('mv-level'), day_number: 1
     };
     
     btn.disabled = true;

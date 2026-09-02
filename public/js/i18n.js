@@ -1,6 +1,6 @@
 // ===== INTERNATIONALIZATION (i18n) =====
 const i18n = {
-  currentLang: localStorage.getItem('lang') || 'en',
+  currentLang: localStorage.getItem('lang') || 'vi',
 
   translations: {
     en: {
@@ -376,7 +376,7 @@ const i18n = {
       'footer.links.register': 'Register Free',
       'footer.features.title': '✨ Features',
       'footer.contact.title': '📬 Contact',
-      'footer.copyright': '© 2026 Eagle English. Made with ❤️ in Vietnam 🇻🇳',
+      'footer.copyright': '© 2026 English Eight. Made with ❤️ in Vietnam 🇻🇳',
       'footer.privacy': 'Privacy Policy',
       'footer.terms': 'Terms of Use',
       'footer.founder.title': '🚀 Looking for Co-founders!',
@@ -386,57 +386,59 @@ const i18n = {
 
     vi: {
       // Landing page
-      'landing.login': 'ĐĂNG NHẬP',
-      'landing.start': 'HỌC MIỄN PHÍ',
-      'landing.hero.title': 'Tự Học Tiếng Anh Miễn Phí Bằng AI — Cho Mọi Người, Đặc Biệt Dân IT',
-      'landing.hero.desc': 'Nền tảng học tiếng Anh tích hợp AI #1 Việt Nam. Thiết kế riêng cho: Người đi làm, Sinh viên, Học sinh & đặc biệt dân IT (Dev, Tester, BA, DevOps). Phát âm AI chấm điểm real-time, Video phụ đề AI song ngữ, Flashcard thông minh, Lộ trình 30 ngày cá nhân hóa. 5000+ từ vựng, 100+ bài học — MIỄN PHÍ mãi mãi.',
-      'landing.hero.cta': 'BẮT ĐẦU NGAY — MIỄN PHÍ 100%',
-      'landing.feature.vocab': '🧠 5000+ Từ Vựng Thông Minh',
-      'landing.feature.vocab.desc': 'Từ vựng được AI sắp xếp cho Công sở, Kinh doanh, IT & Đời sống. Mỗi ngày 10-15 từ mới với phương pháp lặp lại ngắt quãng.',
-      'landing.feature.pron': '🤖 Phát Âm AI',
-      'landing.feature.pron.desc': 'AI chấm điểm phát âm real-time bằng Speech Recognition. Phản hồi tức thì, theo dõi tiến trình & huấn luyện cá nhân.',
-      'landing.feature.skills': '📚 4 Kỹ Năng Cốt Lõi',
-      'landing.feature.skills.desc': 'Reading, Listening, Speaking, Writing — nội dung riêng cho Người đi làm, Sinh viên & Dân IT chuyên nghiệp.',
-      'landing.feature.interview': '💼 Luyện Phỏng Vấn',
-      'landing.feature.interview.desc': 'Luyện câu hỏi phỏng vấn thực tế. Review & xếp hạng lương tại 500+ công ty Việt Nam từ cộng đồng.',
-      'landing.feature.scenarios': '🎯 Tình Huống Thực Tế',
-      'landing.feature.scenarios.desc': 'Họp, thuyết trình, email, gọi khách hàng. Riêng cho IT: Daily standup, code review, sprint planning.',
-      'landing.feature.video': '🎬 Video AI Học Thông Minh',
-      'landing.feature.video.desc': 'Xem video với phụ đề AI song ngữ. Luyện Shadowing, lưu câu hay, xem lại từng đoạn, học theo tốc độ riêng.',
-
-      // Why Eagle English section
-      'landing.why.title': '🚀 Tại Sao Chọn Eagle English?',
-      'landing.why.subtitle': 'Cách học tiếng Anh thông minh nhất Việt Nam',
-      'landing.why.ai': 'Tích Hợp AI',
-      'landing.why.ai.desc': 'Phát âm AI, Phụ đề Video AI, Flashcard thông minh, Lộ trình AI cá nhân hóa',
-      'landing.why.everyone': 'Dành Cho Mọi Người',
-      'landing.why.everyone.desc': 'Người đi làm, Sinh viên, Dân IT — nội dung thiết kế riêng theo trình độ và mục tiêu của BẠN',
-      'landing.why.free': 'Miễn Phí 100% Mãi Mãi',
-      'landing.why.free.desc': 'Không phí ẩn, không gói Premium. Truy cập đầy đủ mọi tính năng, mãi mãi',
-      'landing.why.community': 'Cộng Đồng Sôi Động',
-      'landing.why.community.desc': '500+ review công ty, Q&A phỏng vấn, thông tin lương từ người thật việc thật',
-      'landing.stat.vocab': 'Từ vựng',
-      'landing.stat.lessons': 'Bài học',
-      'landing.stat.videos': 'Video AI',
-      'landing.stat.days': 'Ngày lộ trình',
-
-      // Audience badges
-      'landing.badge.worker': '💼 Người đi làm',
-      'landing.badge.student': '🎓 Sinh viên',
-      'landing.badge.it': '💻 Dân IT',
-      'landing.badge.school': '📖 Học sinh',
-      'landing.badge.everyone': '🌐 Mọi người',
+      'landing.login': 'Đăng nhập',
+      'landing.start': 'Bắt đầu học',
+      'landing.hero.badge': '✨ Miễn phí — Dành cho người Việt',
+      'landing.hero.title': 'Học tiếng Anh theo cách của bạn',
+      'landing.hero.desc': 'Từ vựng, ngữ pháp, flashcard, đọc truyện song ngữ và shadowing — tất cả trong một nền tảng đơn giản, dễ dùng.',
+      'landing.hero.cta': 'Tạo tài khoản miễn phí',
+      'landing.pill.free': '💚 Miễn phí 100%',
+      'landing.pill.vi': '🇻🇳 Giao diện tiếng Việt',
+      'landing.pill.it': '💻 Nội dung IT',
+      'landing.features.title': 'Bạn sẽ học được gì?',
+      'landing.features.subtitle': '5 kỹ năng cốt lõi — thiết kế gọn, tập trung vào thực hành',
+      'landing.feature.vocab': 'Từ vựng',
+      'landing.feature.vocab.desc': 'Học từ theo chủ đề IT: Algorithms, Database, DevOps... Có nghĩa tiếng Việt và ví dụ thực tế.',
+      'landing.feature.grammar': 'Ngữ pháp',
+      'landing.feature.grammar.desc': 'Lý thuyết + bài tập theo từng dạng: Thì, Câu điều kiện, Bị động, Mệnh đề quan hệ...',
+      'landing.feature.flash': 'FlashCards',
+      'landing.feature.flash.desc': 'Ôn từ theo chủ đề, chia Đã học / Chưa học. Lật thẻ xem nghĩa, luyện nhớ nhanh.',
+      'landing.feature.stories': 'Đọc truyện',
+      'landing.feature.stories.desc': 'Truyện tiếng Anh IT — di chuột vào từ được gạch chân để xem nghĩa tiếng Việt ngay.',
+      'landing.feature.shadow': 'Shadowing',
+      'landing.feature.shadow.desc': 'Xem video YouTube có phụ đề song ngữ, luyện nghe và nhại theo từng câu.',
+      'landing.how.title': 'Bắt đầu trong 3 bước',
+      'landing.how.s1.title': 'Đăng ký miễn phí',
+      'landing.how.s1.desc': 'Chỉ cần tên hiển thị, username và mật khẩu — không cần thẻ tín dụng.',
+      'landing.how.s2.title': 'Chọn nội dung học',
+      'landing.how.s2.desc': 'Vào Từ vựng, Ngữ pháp hoặc FlashCards — học theo chủ đề bạn quan tâm.',
+      'landing.how.s3.title': 'Luyện tập mỗi ngày',
+      'landing.how.s3.desc': 'Đọc truyện IT và shadowing video để nâng kỹ năng nghe — đọc thực tế.',
+      'landing.cta.title': 'Sẵn sàng học tiếng Anh?',
+      'landing.cta.desc': 'Tham gia English Eight — hoàn toàn miễn phí, học mọi lúc mọi nơi.',
 
       // Auth
-      'auth.subtitle': 'Học tiếng Anh IT mỗi ngày!',
+      'auth.side.title': 'Chào mừng đến English Eight',
+      'auth.side.desc': 'Học từ vựng, ngữ pháp, flashcard, đọc truyện IT và shadowing — miễn phí, giao diện tiếng Việt.',
+      'auth.side.f1': '📚 Từ vựng theo chủ đề',
+      'auth.side.f2': '✏️ Ngữ pháp theo dạng bài',
+      'auth.side.f3': '📖 Đọc truyện song ngữ',
+      'auth.side.f4': '🎬 Shadowing video',
+      'auth.login.tab': 'Đăng nhập',
+      'auth.register.tab': 'Đăng ký',
+      'auth.login.hint': 'Chưa có tài khoản?',
+      'auth.register.hint': 'Đã có tài khoản?',
+      'auth.subtitle': 'Học tiếng Anh mỗi ngày!',
       'auth.username': 'Tên đăng nhập',
       'auth.username.placeholder': 'Nhập username',
       'auth.password': 'Mật khẩu',
       'auth.password.placeholder': 'Nhập mật khẩu',
-      'auth.login.btn': 'ĐĂNG NHẬP',
+      'auth.login.btn': 'Đăng nhập',
+      'auth.register.btn': 'Tạo tài khoản',
+      'auth.back': '← Về trang chủ',
       'auth.no.account': 'Chưa có tài khoản?',
       'auth.register.link': 'Đăng ký ngay',
-      'auth.back': '← Quay lại trang chủ',
+      'auth.login.link': 'Đăng nhập',
       'auth.displayname': 'Tên hiển thị',
       'auth.displayname.placeholder': 'Tên của bạn',
       'auth.choose.username': 'Chọn username',
@@ -446,7 +448,6 @@ const i18n = {
       'auth.level.intermediate': '📗 Intermediate - Giao tiếp cơ bản được',
       'auth.level.advanced': '🚀 Advanced - Giao tiếp tốt, muốn chuyên sâu',
       'auth.role': '💻 Vị trí công việc',
-      'auth.register.btn': 'TẠO TÀI KHOẢN',
       'auth.has.account': 'Đã có tài khoản?',
       'auth.login.link': 'Đăng nhập',
       'auth.login.error': 'Tài khoản hoặc mật khẩu không chính xác!',
@@ -472,39 +473,39 @@ const i18n = {
       'onboard.start': '🚀 Bắt Đầu Học!',
 
       // Sidebar
-      'nav.overview': 'Tổng quan',
-      'nav.dashboard': 'Dashboard',
-      'nav.daily': 'Học mỗi ngày',
+      'nav.home': 'Trang chủ',
+      'nav.dashboard': 'Trang chủ',
       'nav.vocabulary': 'Từ vựng',
-      'nav.flashcards': 'Flashcards',
+      'nav.flashcards': 'FlashCards',
       'nav.grammar': 'Ngữ pháp',
-      'nav.skills': '4 Kỹ năng',
-      'nav.reading': 'Reading',
-      'nav.listening': 'Listening',
-      'nav.speaking': 'Speaking',
-      'nav.writing': 'Writing',
-      'nav.special': 'Đặc biệt',
-      'nav.pronunciation': 'Phát âm',
-      'nav.video': 'Video',
-      'nav.interview': 'Phỏng vấn',
-      'nav.scenarios': 'Tình huống',
-      'nav.companies': 'Review công ty',
+      'nav.listening': 'Luyện nghe',
+      'nav.stories': 'Đọc truyện',
+      'nav.shadowing': 'Shadowing',
       'nav.logout': 'ĐĂNG XUẤT',
+
+      // Intro
+      'intro.welcome': 'Chào mừng đến với English Eight',
+      'intro.desc': 'Nền tảng học tiếng Anh miễn phí dành cho người Việt. Học từ vựng, ngữ pháp, đọc truyện song ngữ và luyện shadowing mỗi ngày.',
+      'intro.feat.vocab': 'Học từ mới mỗi ngày theo chủ đề',
+      'intro.feat.grammar': 'Lý thuyết và bài tập thực hành',
+      'intro.feat.flash': 'Ôn tập nhanh với thẻ flashcard',
+      'intro.feat.stories': 'Đọc truyện song ngữ, hover xem nghĩa',
+      'intro.feat.shadow': 'Xem video và luyện shadowing',
+      'intro.how.title': 'Cách học hiệu quả',
+      'intro.how.step1': 'Bắt đầu với Từ vựng — học 10-15 từ mới mỗi ngày theo lộ trình.',
+      'intro.how.step2': 'Luyện Ngữ pháp và FlashCards để củng cố kiến thức.',
+      'intro.how.step3': 'Đọc truyện song ngữ và Shadowing để nâng cao kỹ năng thực tế.',
+      'intro.cta': '🚀 Bắt đầu học ngay',
 
       // Dashboard
       'dash.hello': 'Xin chào',
-      'dash.plan': 'Lộ trình 30 ngày học tiếng Anh IT',
-      'dash.streak': 'Day Streak',
       'dash.vocab.learned': 'Từ vựng đã học',
       'dash.exercises': 'Bài tập hôm nay',
       'dash.progress': 'Tiến độ',
       'dash.vocab.progress': '📈 Tiến độ từ vựng',
       'dash.words.mastered': 'từ đã thuộc',
-      'dash.roadmap': '📅 Lộ trình 30 ngày',
-      'dash.roadmap.desc': 'Kế hoạch học tập cá nhân hóa dựa trên trình độ và vị trí của bạn. Hôm nay là Ngày',
       'dash.quick.start': '🚀 Bắt đầu ngay',
       'dash.new.vocab': 'Từ vựng mới',
-      'dash.streak.days': 'ngày streak',
 
       // Vocabulary
       'vocab.title': '📚 Từ vựng',
@@ -537,9 +538,9 @@ const i18n = {
       'flash.learning': '✗ Đang học',
 
       // Grammar
-      'gram.title': '✏️ Bài tập ngữ pháp',
-      'gram.subtitle': 'Luyện ngữ pháp chuyên ngành IT',
-      'gram.theory.title': '📖 Lý Thuyết Ngữ Pháp - Day',
+      'gram.title': '✏️ Ngữ pháp',
+      'gram.subtitle': 'Lý thuyết và bài tập thực hành',
+      'gram.theory.title': '📖 Lý thuyết ngữ pháp - Ngày',
       'gram.theory.expand': '▼ Mở rộng',
       'gram.theory.example': '📝 Ví dụ:',
       'gram.theory.tip': '💡 Mẹo:',
@@ -550,13 +551,10 @@ const i18n = {
       'gram.correct': 'đúng',
       'gram.no.exercises': 'Chưa có bài tập cho ngày này.',
 
-      // Reading
-      'read.title': '📖 Đọc hiểu',
-      'read.subtitle': 'Bài viết IT với câu hỏi trắc nghiệm',
-      'read.listen': '🔊 Nghe bài đọc',
-      'read.stop': '⏹ Dừng',
-      'read.questions': '📝 Câu hỏi đọc hiểu',
-      'read.no.passage': 'Chưa có bài đọc cho ngày này.',
+      // Reading / Stories
+      'read.title': '📖 Đọc truyện',
+      'read.back': 'Quay lại',
+      'read.no.passage': 'Chưa có bài đọc cho chủ đề này.',
 
       // Listening
       'listen.title': '🎧 Luyện nghe',
@@ -567,6 +565,9 @@ const i18n = {
       'listen.hide': 'Ẩn lời thoại',
       'listen.questions': '📝 Câu hỏi',
       'listen.no.dialogue': 'Chưa có hội thoại cho ngày này.',
+
+      'shadow.title': '🎬 Shadowing',
+      'shadow.subtitle': 'Xem video, nghe và lặp lại theo phụ đề song ngữ',
 
       // Speaking
       'speak.title': '🎤 Luyện nói',
@@ -726,7 +727,8 @@ const i18n = {
       'profile.delete.confirm': 'Bạn có chắc muốn xóa câu này?',
       'profile.replay.video': 'Xem lại đoạn Video này',
       'profile.level': 'Cấp độ',
-      'profile.streak': 'ngày liên tục',
+      'profile.registered': 'Ngày đăng ký',
+      'profile.last.login': 'Đăng nhập gần đây',
       'profile.sidebar': '📝 Trang cá nhân',
 
       // Video Player
@@ -741,7 +743,7 @@ const i18n = {
 
       // Footer
       'footer.desc': 'Nền tảng tự học tiếng Anh miễn phí tích hợp AI cho mọi người: người đi làm, sinh viên, học sinh & đặc biệt dân IT.',
-      'footer.tagline': 'Học Thông Minh — Vui Mỗi Ngày! 🦅',
+      'footer.tagline': 'Học tiếng Anh — đơn giản & miễn phí',
       'footer.newsletter.title': '📩 Nhận mẹo học tiếng Anh mỗi tuần',
       'footer.newsletter.placeholder': 'Email của bạn...',
       'footer.newsletter.btn': 'Đăng ký',
@@ -757,7 +759,7 @@ const i18n = {
       'footer.links.register': 'Đăng ký miễn phí',
       'footer.features.title': '✨ Tính năng',
       'footer.contact.title': '📬 Liên hệ',
-      'footer.copyright': '© 2026 Eagle English. Made with ❤️ in Vietnam 🇻🇳',
+      'footer.copyright': '© 2026 English Eight. Made with ❤️ in Vietnam 🇻🇳',
       'footer.privacy': 'Chính sách bảo mật',
       'footer.terms': 'Điều khoản sử dụng',
       'footer.founder.title': '🚀 Tìm Kiếm Co-founder!',
@@ -771,9 +773,9 @@ const i18n = {
   },
 
   setLang(lang) {
-    this.currentLang = lang;
-    localStorage.setItem('lang', lang);
-    document.documentElement.lang = lang === 'vi' ? 'vi' : 'en';
+    this.currentLang = 'vi';
+    localStorage.setItem('lang', 'vi');
+    document.documentElement.lang = 'vi';
     this.updateStaticElements();
     // Update language toggle button appearance
     document.querySelectorAll('.lang-btn').forEach(btn => {

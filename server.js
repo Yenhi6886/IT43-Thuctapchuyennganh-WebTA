@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const { ensureSampleContent } = require('./db/ensure-sample-content');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
@@ -7,6 +8,16 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { query } = require('./db/database');
 const multer = require('multer');
+
+async function ensureUserColumns() {
+  const alters = [
+    'ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+    'ALTER TABLE users ADD COLUMN last_login_at TIMESTAMP NULL'
+  ];
+  for (const sql of alters) {
+    try { await query(sql); } catch (_) {}
+  }
+}
 
 const app = express();
 const PORT = 3000;
@@ -55,7 +66,7 @@ app.post('/api/auth/register', async (req, res) => {
     const hash = bcrypt.hashSync(password, 10);
     const level = english_level || 'Beginner';
     const role = job_role || '';
-    const lang = language || 'en';
+    const lang = language || 'vi';
     await query('INSERT INTO users (id, username, password, display_name, english_level, job_role, language) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [id, username, hash, display_name || username, level, role, lang]);
 
@@ -73,7 +84,7 @@ app.post('/api/auth/register', async (req, res) => {
     // Fetch user's topics for response
     const userTopics = await query('SELECT t.* FROM topics t JOIN user_topics ut ON t.id = ut.topic_id WHERE ut.user_id = ? ORDER BY t.sort_order', [id]);
 
-    res.json({ id, username, display_name: display_name || username, english_level: level, job_role: role, language: lang, topics: userTopics });
+    res.json({ id, username, display_name: display_name || username, english_level: level, job_role: role, language: lang, topics: userTopics, created_at: new Date().toISOString(), last_login_at: new Date().toISOString() });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -82,7 +93,7 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
-    const rows = await query('SELECT id, username, password, display_name, streak_days, last_study_date, english_level, job_role, language, role, avatar_url, email FROM users WHERE username = ?', [username]);
+    const rows = await query('SELECT id, username, password, display_name, streak_days, last_study_date, english_level, job_role, language, role, avatar_url, email, created_at, last_login_at FROM users WHERE username = ?', [username]);
 
     if (!rows.length) {
       return res.status(401).json({ error: 'Invalid credentials' });
@@ -106,15 +117,25 @@ app.post('/api/auth/login', async (req, res) => {
       streak = 1;
     }
 
-    await query('UPDATE users SET streak_days = ?, last_study_date = ? WHERE id = ?', [streak, today, user.id]);
+    await query('UPDATE users SET streak_days = ?, last_study_date = ?, last_login_at = NOW() WHERE id = ?', [streak, today, user.id]);
 
     // Fetch user's topics
     const userTopics = await query('SELECT t.* FROM topics t JOIN user_topics ut ON t.id = ut.topic_id WHERE ut.user_id = ? ORDER BY t.sort_order', [user.id]);
+    const fresh = await query('SELECT created_at, last_login_at FROM users WHERE id = ?', [user.id]);
 
-    res.json({ id: user.id, username: user.username, display_name: user.display_name, streak_days: streak, english_level: user.english_level || 'Beginner', job_role: user.job_role || '', language: user.language || 'en', role: user.role || 'user', topics: userTopics, avatar: user.avatar_url || '', email: user.email || '' });
+    res.json({ id: user.id, username: user.username, display_name: user.display_name, streak_days: streak, english_level: user.english_level || 'Beginner', job_role: user.job_role || '', language: user.language || 'vi', role: user.role || 'user', topics: userTopics, avatar: user.avatar_url || '', email: user.email || '', created_at: fresh[0]?.created_at, last_login_at: fresh[0]?.last_login_at });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+app.get('/api/auth/profile/:userId', async (req, res) => {
+  try {
+    const rows = await query('SELECT id, username, display_name, email, avatar_url, role, created_at, last_login_at FROM users WHERE id = ?', [req.params.userId]);
+    if (!rows.length) return res.status(404).json({ error: 'User not found' });
+    const u = rows[0];
+    res.json({ id: u.id, username: u.username, display_name: u.display_name, email: u.email || '', avatar: u.avatar_url || '', role: u.role, created_at: u.created_at, last_login_at: u.last_login_at });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // ===== SOCIAL LOGIN =====
@@ -200,6 +221,63 @@ app.put('/api/auth/level', async (req, res) => {
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
+app.get('/api/vocabulary/categories', async (req, res) => {
+  try {
+    const userId = req.query.userId;
+    let sql = 'SELECT category, COUNT(*) as count FROM vocabulary';
+    const params = [];
+    if (userId) {
+      const userTopics = await query('SELECT topic_id FROM user_topics WHERE user_id = ?', [userId]);
+      if (userTopics.length > 0) {
+        const topicIds = userTopics.map(t => t.topic_id);
+        sql = `SELECT v.category, COUNT(DISTINCT v.id) as count FROM vocabulary v INNER JOIN vocabulary_topics vt ON v.id = vt.vocabulary_id WHERE vt.topic_id IN (${topicIds.map(() => '?').join(',')})`;
+        params.push(...topicIds);
+      }
+    }
+    sql += ' GROUP BY category ORDER BY category';
+    const rows = await query(sql, params);
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/vocabulary/by-category/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const category = req.query.category || '';
+    const filter = req.query.filter || 'all'; // all | learned | unlearned
+
+    let sql = `SELECT v.*, COALESCE(uv.learned, 0) as learned, COALESCE(uv.mastery_level, 0) as mastery_level,
+      COALESCE(uv.correct_count, 0) as correct_count, COALESCE(uv.review_count, 0) as review_count
+      FROM vocabulary v LEFT JOIN user_vocabulary uv ON v.id = uv.vocabulary_id AND uv.user_id = ?`;
+    const params = [userId];
+
+    const userTopics = await query('SELECT topic_id FROM user_topics WHERE user_id = ?', [userId]);
+    if (userTopics.length > 0) {
+      const topicIds = userTopics.map(t => t.topic_id);
+      sql = `SELECT DISTINCT v.*, COALESCE(uv.learned, 0) as learned, COALESCE(uv.mastery_level, 0) as mastery_level,
+        COALESCE(uv.correct_count, 0) as correct_count, COALESCE(uv.review_count, 0) as review_count
+        FROM vocabulary v INNER JOIN vocabulary_topics vt ON v.id = vt.vocabulary_id
+        LEFT JOIN user_vocabulary uv ON v.id = uv.vocabulary_id AND uv.user_id = ?
+        WHERE vt.topic_id IN (${topicIds.map(() => '?').join(',')})`;
+      params.push(...topicIds);
+    }
+
+    if (category) {
+      sql += sql.includes(' WHERE ') ? ' AND v.category = ?' : ' WHERE v.category = ?';
+      params.push(category);
+    }
+    if (filter === 'learned') {
+      sql += sql.includes(' WHERE ') ? ' AND COALESCE(uv.learned, 0) = 1' : ' WHERE COALESCE(uv.learned, 0) = 1';
+    } else if (filter === 'unlearned') {
+      sql += sql.includes(' WHERE ') ? ' AND COALESCE(uv.learned, 0) = 0' : ' WHERE COALESCE(uv.learned, 0) = 0';
+    }
+
+    sql += ' ORDER BY v.id';
+    const words = await query(sql, params);
+    res.json(words);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/vocabulary/daily/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -270,10 +348,11 @@ app.post('/api/vocabulary/learn', async (req, res) => {
       const row = existing[0];
       const reviewCount = row.review_count + 1;
       const correctCount = row.correct_count + (correct ? 1 : 0);
-      const mastery = Math.min(5, Math.floor(correctCount / 2));
-      await query('UPDATE user_vocabulary SET review_count = ?, correct_count = ?, mastery_level = ?, learned = 1, last_review = ? WHERE id = ?', [reviewCount, correctCount, mastery, now, row.id]);
+      const mastery = correct ? Math.min(5, Math.floor(correctCount / 2)) : row.mastery_level;
+      const learned = correct ? 1 : 0;
+      await query('UPDATE user_vocabulary SET review_count = ?, correct_count = ?, mastery_level = ?, learned = ?, last_review = ? WHERE id = ?', [reviewCount, correctCount, mastery, learned, now, row.id]);
     } else {
-      await query('INSERT INTO user_vocabulary (user_id, vocabulary_id, learned, review_count, correct_count, mastery_level, last_review) VALUES (?, ?, 1, 1, ?, ?, ?)', [userId, vocabularyId, correct ? 1 : 0, correct ? 1 : 0, now]);
+      await query('INSERT INTO user_vocabulary (user_id, vocabulary_id, learned, review_count, correct_count, mastery_level, last_review) VALUES (?, ?, ?, 1, ?, ?, ?)', [userId, vocabularyId, correct ? 1 : 0, correct ? 1 : 0, correct ? 1 : 0, now]);
     }
 
     // Update daily stats
@@ -292,6 +371,40 @@ app.post('/api/vocabulary/learn', async (req, res) => {
 });
 
 // ===== READING ROUTES =====
+const READING_TOPIC = { name: 'IT', icon: '💻' };
+
+function normalizeReadingCategory(cat) {
+  return 'IT';
+}
+
+app.get('/api/reading/topics', async (req, res) => {
+  try {
+    const rows = await query('SELECT COUNT(*) as total FROM reading_passages');
+    res.json([{ name: READING_TOPIC.name, icon: READING_TOPIC.icon, count: rows[0]?.total || 0 }]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/reading/list', async (req, res) => {
+  try {
+    const category = req.query.category;
+    const rows = await query('SELECT id, title, category, day_number FROM reading_passages ORDER BY id');
+    let list = rows.map(r => ({ ...r, category: normalizeReadingCategory(r.category) }));
+    if (category) list = list.filter(r => r.category === category);
+    res.json(list);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/reading/story/:id', async (req, res) => {
+  try {
+    const rows = await query('SELECT * FROM reading_passages WHERE id = ?', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    const obj = rows[0];
+    obj.category = normalizeReadingCategory(obj.category);
+    if (typeof obj.questions === 'string') obj.questions = safeParseJson(obj.questions, []);
+    res.json(obj);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/reading/:day', async (req, res) => {
   try {
     const userId = req.query.userId;
@@ -340,6 +453,39 @@ app.get('/api/listening/:day', async (req, res) => {
 });
 
 // ===== GRAMMAR ROUTES =====
+const GRAMMAR_TYPES = [
+  'Thì (Tenses)', 'Câu điều kiện (Conditionals)', 'Câu bị động (Passive Voice)',
+  'Mệnh đề quan hệ (Relative Clauses)', 'Giới từ (Prepositions)', 'Liên từ (Conjunctions)',
+  'Động từ khuyết thiếu (Modals)', 'Danh động từ & V-ing (Gerunds)', 'So sánh (Comparisons)'
+];
+
+app.get('/api/grammar/types', async (req, res) => {
+  try {
+    const lessonRows = await query('SELECT topic, COUNT(*) as count FROM grammar_lessons WHERE topic IS NOT NULL AND topic != "" GROUP BY topic');
+    const exRows = await query('SELECT grammar_topic, COUNT(*) as count FROM grammar_exercises WHERE grammar_topic IS NOT NULL AND grammar_topic != "" GROUP BY grammar_topic');
+    const counts = {};
+    lessonRows.forEach(r => { counts[r.topic] = (counts[r.topic] || 0) + r.count; });
+    exRows.forEach(r => { counts[r.grammar_topic] = (counts[r.grammar_topic] || 0) + r.count; });
+    const types = [...new Set([...GRAMMAR_TYPES, ...Object.keys(counts)])];
+    res.json(types.map(name => ({ name, count: counts[name] || 0 })));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/grammar/lessons-by-type/:type', async (req, res) => {
+  try {
+    const rows = await query('SELECT * FROM grammar_lessons WHERE topic = ? ORDER BY id', [req.params.type]);
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/grammar/exercises-by-type/:type', async (req, res) => {
+  try {
+    const rows = await query('SELECT * FROM grammar_exercises WHERE grammar_topic = ? ORDER BY id', [req.params.type]);
+    rows.forEach(r => { if (typeof r.options === 'string') r.options = JSON.parse(r.options); });
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/grammar/lessons/:day', async (req, res) => {
   try {
     const rows = await query('SELECT * FROM grammar_lessons WHERE day_number = ? ORDER BY id', [parseInt(req.params.day)]);
@@ -751,65 +897,20 @@ app.get('/api/admin/dashboard', async (req, res) => {
   try {
     const usersResult = await query('SELECT COUNT(*) as total FROM users');
     const vocabResult = await query('SELECT COUNT(*) as total FROM vocabulary');
-    const vocabLearnedResult = await query('SELECT COUNT(*) as total FROM user_vocabulary');
-    const testResult = await query('SELECT COUNT(*) as total FROM user_progress');
-    const visitsResult = await query('SELECT COUNT(*) as total FROM user_checkins');
+    const grammarLessonsResult = await query('SELECT COUNT(*) as total FROM grammar_lessons');
     const grammarResult = await query('SELECT COUNT(*) as total FROM grammar_exercises');
     const readingResult = await query('SELECT COUNT(*) as total FROM reading_passages');
     const listeningResult = await query('SELECT COUNT(*) as total FROM listening_dialogues');
-    const speakingResult = await query('SELECT COUNT(*) as total FROM speaking_prompts');
-    const writingResult = await query('SELECT COUNT(*) as total FROM writing_tasks');
-    const topicsResult = await query('SELECT COUNT(*) as total FROM topics');
     const videosResult = await query('SELECT COUNT(*) as total FROM youtube_listening');
-    const checkinsByDay = await query('SELECT checkin_date, COUNT(*) as count FROM user_checkins GROUP BY checkin_date ORDER BY checkin_date DESC LIMIT 7');
-
-    const usersByRole = await query(`SELECT
-      SUM(CASE WHEN role = 'role_admin' THEN 1 ELSE 0 END) as admins,
-      SUM(CASE WHEN role != 'role_admin' OR role IS NULL THEN 1 ELSE 0 END) as users
-      FROM users`);
-    const recentUsers = await query(`SELECT id, username, display_name, english_level, role, streak_days, last_study_date
-      FROM users ORDER BY COALESCE(last_study_date, '1970-01-01') DESC, streak_days DESC LIMIT 8`);
-    const vocabByCategory = await query(`SELECT COALESCE(NULLIF(category,''), 'Khác') as category, COUNT(*) as count
-      FROM vocabulary GROUP BY COALESCE(NULLIF(category,''), 'Khác') ORDER BY count DESC LIMIT 10`);
-    const progressByType = await query(`SELECT activity_type, COUNT(*) as count, ROUND(AVG(score), 1) as avg_score
-      FROM user_progress GROUP BY activity_type ORDER BY count DESC`);
-    const recentActivity = await query(`SELECT up.activity_type, up.score, up.completed, u.display_name, u.username
-      FROM user_progress up
-      LEFT JOIN users u ON u.id = up.user_id
-      ORDER BY up.id DESC LIMIT 10`);
-    const topicsDetail = await query(`SELECT t.name, t.icon, t.color,
-      (SELECT COUNT(*) FROM user_topics WHERE topic_id = t.id) as user_count,
-      (SELECT COUNT(*) FROM vocabulary_topics WHERE topic_id = t.id) as vocab_count
-      FROM topics t ORDER BY t.sort_order, t.name LIMIT 12`);
-    const recentVideos = await query(`SELECT id, title, youtube_id, duration FROM youtube_listening ORDER BY id DESC LIMIT 5`);
-    const levelBreakdown = await query(`SELECT COALESCE(NULLIF(english_level,''), 'Chưa chọn') as level, COUNT(*) as count
-      FROM users GROUP BY COALESCE(NULLIF(english_level,''), 'Chưa chọn') ORDER BY count DESC`);
 
     res.json({
       totalUsers: usersResult[0].total,
       totalVocab: vocabResult[0].total,
-      vocabLearned: vocabLearnedResult[0].total,
-      totalTests: testResult[0].total,
-      totalVisits: visitsResult[0].total || 0,
+      totalGrammarLessons: grammarLessonsResult[0].total,
       totalGrammar: grammarResult[0].total,
       totalReading: readingResult[0].total,
       totalListening: listeningResult[0].total,
-      totalSpeaking: speakingResult[0].total,
-      totalWriting: writingResult[0].total,
-      totalTopics: topicsResult[0].total,
-      totalVideos: videosResult[0].total,
-      weeklyCheckins: checkinsByDay.reverse(),
-      usersByRole: {
-        admins: Number(usersByRole[0]?.admins || 0),
-        users: Number(usersByRole[0]?.users || 0)
-      },
-      recentUsers,
-      vocabByCategory,
-      progressByType,
-      recentActivity,
-      topicsDetail,
-      recentVideos,
-      levelBreakdown
+      totalShadowing: videosResult[0].total || 0
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -956,7 +1057,7 @@ app.get('/api/admin/users', async (req, res) => {
     }
     const countResult = await query('SELECT COUNT(*) as total FROM users' + whereSql, params);
     const total = countResult[0].total;
-    const rows = await query('SELECT id, username, display_name, english_level, job_role, role, streak_days, last_study_date FROM users' + whereSql + ' ORDER BY role DESC, streak_days DESC' + limitSql, params);
+    const rows = await query('SELECT id, username, display_name, role, created_at, last_login_at FROM users' + whereSql + ' ORDER BY role DESC, COALESCE(last_login_at, created_at) DESC' + limitSql, params);
     res.json({ data: rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1207,11 +1308,17 @@ app.delete('/api/admin/grammar/:id', async (req, res) => {
 app.get('/api/admin/reading', async (req, res) => {
   try {
     const { page, limit, limitSql } = getPagination(req);
+    const category = req.query.category;
     const countResult = await query('SELECT COUNT(*) as total FROM reading_passages');
-    const total = countResult[0].total;
-    const rows = await query('SELECT * FROM reading_passages ORDER BY day_number, id' + limitSql);
-    rows.forEach(r => { r.questions = safeParseJson(r.questions, []); });
-    res.json({ data: rows, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
+    const rows = await query('SELECT * FROM reading_passages ORDER BY category, id' + limitSql);
+    rows.forEach(r => {
+      r.category = normalizeReadingCategory(r.category);
+      r.questions = safeParseJson(r.questions, []);
+    });
+    let data = rows;
+    if (category) data = rows.filter(r => r.category === category);
+    const total = category ? data.length : countResult[0].total;
+    res.json({ data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1228,9 +1335,10 @@ app.post('/api/admin/reading', async (req, res) => {
   try {
     const { title, content, category, questions, day_number } = req.body;
     if (!title || !content) return res.status(400).json({ error: 'Title and content required' });
+    const cat = normalizeReadingCategory(category);
     const qs = typeof questions === 'string' ? questions : JSON.stringify(questions || []);
     const result = await query('INSERT INTO reading_passages (title, content, category, questions, day_number) VALUES (?,?,?,?,?)',
-      [title, content, category || '', qs, day_number || 1]);
+      [title, content, cat, qs, day_number || 1]);
     res.json({ success: true, id: result.insertId });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1239,9 +1347,10 @@ app.put('/api/admin/reading/:id', async (req, res) => {
   try {
     const { title, content, category, questions, day_number } = req.body;
     if (!title || !content) return res.status(400).json({ error: 'Title and content required' });
+    const cat = normalizeReadingCategory(category);
     const qs = typeof questions === 'string' ? questions : JSON.stringify(questions || []);
     await query('UPDATE reading_passages SET title=?, content=?, category=?, questions=?, day_number=? WHERE id=?',
-      [title, content, category || '', qs, day_number || 1, req.params.id]);
+      [title, content, cat, qs, day_number || 1, req.params.id]);
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1420,15 +1529,45 @@ app.get('/api/dictation/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ===== YOUTUBE LISTENING API =====
+// ===== YOUTUBE LISTENING / SHADOWING API =====
+const SHADOWING_TOPICS = [
+  { name: 'Hội thoại', icon: '💬' },
+  { name: 'Công sở', icon: '💼' },
+  { name: 'IT', icon: '💻' }
+];
+
+const LEGACY_SHADOWING_MAP = {
+  'conversation': 'Hội thoại', 'Hội thoại': 'Hội thoại',
+  'business': 'Công sở', 'Công sở': 'Công sở',
+  'tech-conversation': 'IT', 'tech-interview': 'IT', 'IT': 'IT',
+  'Công nghệ': 'IT', 'Phỏng vấn IT': 'IT', 'Phỏng vấn': 'IT'
+};
+
+function normalizeShadowingCategory(cat) {
+  if (!cat) return 'Hội thoại';
+  if (SHADOWING_TOPICS.some(t => t.name === cat)) return cat;
+  return LEGACY_SHADOWING_MAP[cat] || 'IT';
+}
+
+app.get('/api/shadowing/topics', async (req, res) => {
+  try {
+    const rows = await query('SELECT category FROM youtube_listening');
+    const counts = Object.fromEntries(SHADOWING_TOPICS.map(t => [t.name, 0]));
+    rows.forEach(r => {
+      const n = normalizeShadowingCategory(r.category);
+      counts[n] = (counts[n] || 0) + 1;
+    });
+    res.json(SHADOWING_TOPICS.map(t => ({ name: t.name, icon: t.icon, count: counts[t.name] || 0 })));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/youtube-listening', async (req, res) => {
   try {
     const { category } = req.query;
-    let sql = 'SELECT id, title, youtube_id, category, level, duration, day_number FROM youtube_listening WHERE 1=1';
-    const params = [];
-    if (category) { sql += ' AND category = ?'; params.push(category); }
-    sql += ' ORDER BY day_number ASC';
-    res.json(await query(sql, params));
+    const rows = await query('SELECT id, title, youtube_id, category, level, duration FROM youtube_listening ORDER BY id');
+    let list = rows.map(r => ({ ...r, category: normalizeShadowingCategory(r.category) }));
+    if (category) list = list.filter(r => r.category === category);
+    res.json(list);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1652,6 +1791,8 @@ async function start() {
       if (r.affectedRows > 0) console.log(`✅ Migrated ${r.affectedRows} user(s) to role=user`);
     } catch (e) { console.warn('Role migrate skip:', e.message); }
 
+    await ensureUserColumns();
+    await ensureSampleContent();
   } catch (e) {
     console.error('❌ Failed to connect to MySQL:', e.message);
     process.exit(1);
