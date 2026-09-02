@@ -1456,3 +1456,72 @@ a.footer-link-item { text-decoration: none; }
 .story-topic-icon { font-size: 36px; margin-bottom: 12px; }
 .story-topic-card h3 { font-size: 15px; font-weight: 800; color: var(--green-800); margin-bottom: 6px; }
 .story-topic-card span { font-size: 13px; color: var(--text-muted); }
+
+/* ===== PAGINATION ===== */
+.pager-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 24px; padding: 16px 20px; gap: 16px; flex-wrap: wrap;
+  background: white; border: 2px solid var(--border); border-radius: var(--radius-lg);
+}
+.pager-info { font-size: 14px; font-weight: 700; color: var(--text-secondary); }
+.pager-controls { display: flex; align-items: center; gap: 12px; }
+.pager-pages { font-size: 14px; font-weight: 800; color: var(--green-800); min-width: 80px; text-align: center; }
+.pager-btn {
+  padding: 10px 18px; border: 2px solid var(--border); border-radius: 12px;
+  background: white; color: var(--text-primary); font-family: inherit;
+  font-size: 14px; font-weight: 800; cursor: pointer; transition: var(--transition);
+}
+.pager-btn:hover:not(:disabled) { border-color: var(--leaf); color: var(--leaf-dark); background: var(--leaf-bg); }
+.pager-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ===== GRAMMAR THEORY & PRACTICE ===== */
+.grammar-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 16px; flex-wrap: wrap;
+}
+.grammar-section-header h3 { font-size: 20px; font-weight: 900; color: var(--green-800); }
+.grammar-theory-wrap, .grammar-practice-wrap { margin-bottom: 24px; }
+.grammar-theory-card { margin-bottom: 16px; border-left: 4px solid var(--leaf); }
+.grammar-theory-head {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 16px 16px 0; border-bottom: 1px solid var(--border);
+}
+.grammar-theory-icon { font-size: 28px; line-height: 1; }
+.grammar-theory-title { font-size: 17px; font-weight: 800; color: var(--green-900); margin-bottom: 6px; }
+.grammar-topic-badge {
+  display: inline-block; background: var(--leaf-bg); color: var(--leaf-dark);
+  padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;
+}
+.grammar-theory-body { padding: 16px; }
+.grammar-theory-content { font-size: 14px; line-height: 1.8; color: var(--text-secondary); }
+.grammar-box { margin-top: 12px; padding: 12px 14px; border-radius: var(--radius); font-size: 13px; line-height: 1.7; }
+.grammar-box-example { background: var(--leaf-bg); color: var(--green-800); }
+.grammar-box-tip { background: #eff6ff; color: #1d4ed8; }
+.grammar-part-card { margin-bottom: 16px; }
+.grammar-part-meta { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.grammar-progress-bar {
+  position: relative; height: 32px; background: var(--bg-primary);
+  border: 2px solid var(--border); border-radius: var(--radius);
+  margin-bottom: 16px; overflow: hidden;
+}
+.grammar-progress-fill {
+  position: absolute; left: 0; top: 0; height: 100%;
+  background: linear-gradient(90deg, var(--leaf-light), var(--leaf));
+  transition: width 0.4s ease;
+}
+.grammar-progress-text {
+  position: relative; z-index: 1; display: flex; align-items: center; justify-content: center;
+  height: 100%; font-size: 13px; font-weight: 800; color: var(--green-900);
+}
+.quiz-question-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.quiz-question.quiz-done { opacity: 0.95; border-left: 3px solid var(--leaf); padding-left: 12px; }
+.quiz-status { font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
+.quiz-status-ok { background: var(--leaf-bg); color: var(--leaf-dark); }
+.quiz-status-fail { background: #fef2f2; color: #dc2626; }
+.grammar-tab-filter { margin-bottom: 20px; margin-top: 4px; }
+.grammar-empty { margin-bottom: 16px; }
+
+@media (max-width: 600px) {
+  .pager-bar { flex-direction: column; text-align: center; }
+  .pager-controls { width: 100%; justify-content: center; }
+}

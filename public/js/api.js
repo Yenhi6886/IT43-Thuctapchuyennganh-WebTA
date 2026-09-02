@@ -19,10 +19,12 @@ const API = {
   // Vocab
   getDailyVocab: (userId, day) => API.request('GET', `/api/vocabulary/daily/${userId}?day=${day}`),
   getVocabCategories: (userId) => API.request('GET', `/api/vocabulary/categories${userId ? '?userId=' + userId : ''}`),
-  getVocabByCategory: (userId, category, filter) => {
+  getVocabByCategory: (userId, category, filter, page, limit) => {
     let url = `/api/vocabulary/by-category/${userId}?`;
     if (category) url += 'category=' + encodeURIComponent(category) + '&';
-    if (filter) url += 'filter=' + filter;
+    if (filter) url += 'filter=' + filter + '&';
+    if (page != null) url += 'page=' + page + '&';
+    if (limit != null) url += 'limit=' + limit + '&';
     return API.request('GET', url);
   },
   getAllVocab: (cat, userId) => { let url = '/api/vocabulary/all?'; if (cat) url += 'category=' + encodeURIComponent(cat) + '&'; if (userId) url += 'userId=' + userId; return API.request('GET', url); },
@@ -36,9 +38,15 @@ const API = {
   // Listening
   getListening: (day, userId) => API.request('GET', `/api/listening/${day}${userId ? '?userId=' + userId : ''}`),
   // Grammar
-  getGrammarTypes: () => API.request('GET', '/api/grammar/types'),
+  getGrammarTypes: (kind) => API.request('GET', `/api/grammar/types${kind ? '?kind=' + kind : ''}`),
   getGrammarLessonsByType: (type) => API.request('GET', `/api/grammar/lessons-by-type/${encodeURIComponent(type)}`),
-  getGrammarExercisesByType: (type) => API.request('GET', `/api/grammar/exercises-by-type/${encodeURIComponent(type)}`),
+  getGrammarExercisesByType: (type, userId) => {
+    let url = `/api/grammar/exercises-by-type/${encodeURIComponent(type)}`;
+    if (userId) url += '?userId=' + userId;
+    return API.request('GET', url);
+  },
+  submitGrammarAnswer: (userId, exerciseId, selected, correct) =>
+    API.request('POST', '/api/grammar/answer', { userId, exerciseId, selected, correct }),
   getGrammar: (day) => API.request('GET', `/api/grammar/${day}`),
   // Writing
   getWriting: (day, userId) => API.request('GET', `/api/writing/${day}${userId ? '?userId=' + userId : ''}`),

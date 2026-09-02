@@ -1,5 +1,11 @@
 /* Admin content CRUD: vocab, grammar, reading, listening, speaking, writing */
 const _store = { vocab: {}, lessons: {}, grammar: {}, reading: {}, listening: {}, speaking: {}, writing: {} };
+const VOCAB_CATEGORIES = ['IT', 'Công sở', 'Giao tiếp', 'Du lịch', 'Ăn uống', 'Hàng ngày', 'Sức khỏe', 'Mua sắm'];
+
+function vocabCategoryOptions(selected) {
+  const cur = selected || 'IT';
+  return VOCAB_CATEGORIES.map(c => `<option value="${esc(c)}"${c === cur ? ' selected' : ''}>${esc(c)}</option>`).join('');
+}
 
 function storeItems(type, items) {
   _store[type] = {};
@@ -230,11 +236,13 @@ function loadVocabulary(page) {
     }
     const pager = document.getElementById('vocab-pager');
     if (pager) {
-      pager.innerHTML = `<span class="text-muted">Hiển thị ${data.length ? ((_vocabPage - 1) * VOCAB_PAGE_SIZE + 1) : 0}–${Math.min(_vocabPage * VOCAB_PAGE_SIZE, total)} / ${Number(total).toLocaleString()} từ</span>
-        <div style="display:flex;gap:0.5rem;align-items:center">
-          <button class="btn btn-outline" ${_vocabPage <= 1 ? 'disabled' : ''} onclick="loadVocabulary(${_vocabPage - 1})">← Trước</button>
-          <span>Trang ${_vocabPage}/${totalPages}</span>
-          <button class="btn btn-outline" ${_vocabPage >= totalPages ? 'disabled' : ''} onclick="loadVocabulary(${_vocabPage + 1})">Sau →</button>
+      const from = data.length ? ((_vocabPage - 1) * VOCAB_PAGE_SIZE + 1) : 0;
+      const to = Math.min(_vocabPage * VOCAB_PAGE_SIZE, total);
+      pager.innerHTML = `<span class="pager-info">Hiển thị ${from}–${to} / ${Number(total).toLocaleString()} từ</span>
+        <div class="pager-controls">
+          <button class="pager-btn" ${_vocabPage <= 1 ? 'disabled' : ''} onclick="loadVocabulary(${_vocabPage - 1})">← Trước</button>
+          <span class="pager-pages">Trang ${_vocabPage}/${totalPages}</span>
+          <button class="pager-btn" ${_vocabPage >= totalPages ? 'disabled' : ''} onclick="loadVocabulary(${_vocabPage + 1})">Sau →</button>
         </div>`;
     }
   }).catch(e => {
@@ -250,7 +258,7 @@ function showVocabForm(v) {
     <div class="form-group"><label>Loại từ</label><input id="m-type" value="${valAttr(v?.word_type || 'n.')}"></div>
     <div class="form-group"><label>Nghĩa (VN)</label><input id="m-defvi" value="${valAttr(v?.definition_vi || '')}"></div>
     <div class="form-group"><label>Nghĩa (EN)</label><input id="m-defen" value="${valAttr(v?.definition_en || '')}"></div>
-    <div class="form-group"><label>Danh mục</label><input id="m-cat" value="${valAttr(v?.category || 'Chung')}"></div>
+    <div class="form-group"><label>Danh mục</label><select id="m-cat">${vocabCategoryOptions(v?.category || 'IT')}</select></div>
     <div class="form-group"><label>Ví dụ 1</label><input id="m-ex1" value="${valAttr(v?.example1 || '')}"></div>
     <div class="form-group"><label>Ví dụ 2</label><input id="m-ex2" value="${valAttr(v?.example2 || '')}"></div>
     <div class="form-group"><label>Ví dụ 3</label><input id="m-ex3" value="${valAttr(v?.example3 || '')}"></div>

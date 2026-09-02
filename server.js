@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const { ensureSampleContent } = require('./db/ensure-sample-content');
+const { normalizeVocabCategory, VOCAB_CATEGORIES } = require('./db/vocab-categories');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
@@ -221,22 +222,23 @@ app.put('/api/auth/level', async (req, res) => {
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
+app.get('/api/vocabulary/category-list', (req, res) => {
+  res.json(VOCAB_CATEGORIES);
+});
+
 app.get('/api/vocabulary/categories', async (req, res) => {
   try {
-    const userId = req.query.userId;
-    let sql = 'SELECT category, COUNT(*) as count FROM vocabulary';
-    const params = [];
-    if (userId) {
-      const userTopics = await query('SELECT topic_id FROM user_topics WHERE user_id = ?', [userId]);
-      if (userTopics.length > 0) {
-        const topicIds = userTopics.map(t => t.topic_id);
-        sql = `SELECT v.category, COUNT(DISTINCT v.id) as count FROM vocabulary v INNER JOIN vocabulary_topics vt ON v.id = vt.vocabulary_id WHERE vt.topic_id IN (${topicIds.map(() => '?').join(',')})`;
-        params.push(...topicIds);
+    const rows = await query('SELECT category, COUNT(*) as count FROM vocabulary GROUP BY category');
+    const countMap = Object.fromEntries(rows.map(r => [r.category, Number(r.count)]));
+    const result = VOCAB_CATEGORIES
+      .filter(c => countMap[c])
+      .map(c => ({ category: c, count: countMap[c] }));
+    rows.forEach(r => {
+      if (!VOCAB_CATEGORIES.includes(r.category)) {
+        result.push({ category: r.category, count: Number(r.count) });
       }
-    }
-    sql += ' GROUP BY category ORDER BY category';
-    const rows = await query(sql, params);
-    res.json(rows);
+    });
+    res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -245,36 +247,37 @@ app.get('/api/vocabulary/by-category/:userId', async (req, res) => {
     const { userId } = req.params;
     const category = req.query.category || '';
     const filter = req.query.filter || 'all'; // all | learned | unlearned
+    const usePagination = req.query.page != null || req.query.limit != null;
 
-    let sql = `SELECT v.*, COALESCE(uv.learned, 0) as learned, COALESCE(uv.mastery_level, 0) as mastery_level,
-      COALESCE(uv.correct_count, 0) as correct_count, COALESCE(uv.review_count, 0) as review_count
-      FROM vocabulary v LEFT JOIN user_vocabulary uv ON v.id = uv.vocabulary_id AND uv.user_id = ?`;
+    let baseSql = `FROM vocabulary v LEFT JOIN user_vocabulary uv ON v.id = uv.vocabulary_id AND uv.user_id = ?`;
     const params = [userId];
-
-    const userTopics = await query('SELECT topic_id FROM user_topics WHERE user_id = ?', [userId]);
-    if (userTopics.length > 0) {
-      const topicIds = userTopics.map(t => t.topic_id);
-      sql = `SELECT DISTINCT v.*, COALESCE(uv.learned, 0) as learned, COALESCE(uv.mastery_level, 0) as mastery_level,
-        COALESCE(uv.correct_count, 0) as correct_count, COALESCE(uv.review_count, 0) as review_count
-        FROM vocabulary v INNER JOIN vocabulary_topics vt ON v.id = vt.vocabulary_id
-        LEFT JOIN user_vocabulary uv ON v.id = uv.vocabulary_id AND uv.user_id = ?
-        WHERE vt.topic_id IN (${topicIds.map(() => '?').join(',')})`;
-      params.push(...topicIds);
-    }
+    const conditions = [];
 
     if (category) {
-      sql += sql.includes(' WHERE ') ? ' AND v.category = ?' : ' WHERE v.category = ?';
+      conditions.push('v.category = ?');
       params.push(category);
     }
     if (filter === 'learned') {
-      sql += sql.includes(' WHERE ') ? ' AND COALESCE(uv.learned, 0) = 1' : ' WHERE COALESCE(uv.learned, 0) = 1';
+      conditions.push('COALESCE(uv.learned, 0) = 1');
     } else if (filter === 'unlearned') {
-      sql += sql.includes(' WHERE ') ? ' AND COALESCE(uv.learned, 0) = 0' : ' WHERE COALESCE(uv.learned, 0) = 0';
+      conditions.push('COALESCE(uv.learned, 0) = 0');
+    }
+    if (conditions.length) baseSql += ' WHERE ' + conditions.join(' AND ');
+
+    const orderSql = ' ORDER BY v.id';
+
+    if (!usePagination) {
+      const words = await query(`SELECT v.*, COALESCE(uv.learned, 0) as learned, COALESCE(uv.mastery_level, 0) as mastery_level,
+        COALESCE(uv.correct_count, 0) as correct_count, COALESCE(uv.review_count, 0) as review_count ${baseSql}${orderSql}`, params);
+      return res.json(words);
     }
 
-    sql += ' ORDER BY v.id';
-    const words = await query(sql, params);
-    res.json(words);
+    const { page, limit, limitSql } = getPagination(req);
+    const countResult = await query(`SELECT COUNT(*) as total ${baseSql}`, params);
+    const total = countResult[0].total;
+    const words = await query(`SELECT v.*, COALESCE(uv.learned, 0) as learned, COALESCE(uv.mastery_level, 0) as mastery_level,
+      COALESCE(uv.correct_count, 0) as correct_count, COALESCE(uv.review_count, 0) as review_count ${baseSql}${orderSql}${limitSql}`, params);
+    res.json({ data: words, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -311,23 +314,11 @@ app.get('/api/vocabulary/daily/:userId', async (req, res) => {
 app.get('/api/vocabulary/all', async (req, res) => {
   try {
     const category = req.query.category;
-    const userId = req.query.userId;
-    let sql, params = [];
-
-    if (userId) {
-      const userTopics = await query('SELECT topic_id FROM user_topics WHERE user_id = ?', [userId]);
-      if (userTopics.length > 0) {
-        const topicIds = userTopics.map(t => t.topic_id);
-        sql = `SELECT DISTINCT v.* FROM vocabulary v INNER JOIN vocabulary_topics vt ON v.id = vt.vocabulary_id WHERE vt.topic_id IN (${topicIds.map(() => '?').join(',')})`;
-        params = [...topicIds];
-        if (category) { sql += ' AND v.category = ?'; params.push(category); }
-      } else {
-        sql = 'SELECT * FROM vocabulary';
-        if (category) { sql += ' WHERE category = ?'; params.push(category); }
-      }
-    } else {
-      sql = 'SELECT * FROM vocabulary';
-      if (category) { sql += ' WHERE category = ?'; params.push(category); }
+    let sql = 'SELECT * FROM vocabulary';
+    const params = [];
+    if (category) {
+      sql += ' WHERE category = ?';
+      params.push(category);
     }
     sql += ' ORDER BY day_number, id';
     const rows = await query(sql, params);
@@ -459,30 +450,128 @@ const GRAMMAR_TYPES = [
   'Động từ khuyết thiếu (Modals)', 'Danh động từ & V-ing (Gerunds)', 'So sánh (Comparisons)'
 ];
 
+const GRAMMAR_TOPIC_ALIASES = {
+  'Tenses': 'Thì (Tenses)', 'Conditionals': 'Câu điều kiện (Conditionals)',
+  'Passive Voice': 'Câu bị động (Passive Voice)', 'Relative Clauses': 'Mệnh đề quan hệ (Relative Clauses)',
+  'Prepositions': 'Giới từ (Prepositions)', 'Conjunctions': 'Liên từ (Conjunctions)',
+  'Modals': 'Động từ khuyết thiếu (Modals)', 'Gerunds': 'Danh động từ & V-ing (Gerunds)',
+  'Infinitives': 'Danh động từ & V-ing (Gerunds)', 'Comparisons': 'So sánh (Comparisons)',
+  'Correlative Conjunctions': 'Liên từ (Conjunctions)', 'Subject-Verb Agreement': 'Thì (Tenses)'
+};
+
+function normalizeGrammarTopic(topic) {
+  if (!topic) return '';
+  const t = String(topic).trim();
+  if (GRAMMAR_TYPES.includes(t)) return t;
+  return GRAMMAR_TOPIC_ALIASES[t] || t;
+}
+
+function grammarTopicVariants(canonical) {
+  const variants = [canonical];
+  Object.entries(GRAMMAR_TOPIC_ALIASES).forEach(([alias, target]) => {
+    if (target === canonical) variants.push(alias);
+  });
+  return [...new Set(variants)];
+}
+
 app.get('/api/grammar/types', async (req, res) => {
   try {
+    const kind = req.query.kind || 'all'; // theory | exercises | all
     const lessonRows = await query('SELECT topic, COUNT(*) as count FROM grammar_lessons WHERE topic IS NOT NULL AND topic != "" GROUP BY topic');
     const exRows = await query('SELECT grammar_topic, COUNT(*) as count FROM grammar_exercises WHERE grammar_topic IS NOT NULL AND grammar_topic != "" GROUP BY grammar_topic');
-    const counts = {};
-    lessonRows.forEach(r => { counts[r.topic] = (counts[r.topic] || 0) + r.count; });
-    exRows.forEach(r => { counts[r.grammar_topic] = (counts[r.grammar_topic] || 0) + r.count; });
-    const types = [...new Set([...GRAMMAR_TYPES, ...Object.keys(counts)])];
-    res.json(types.map(name => ({ name, count: counts[name] || 0 })));
+    const lessonCounts = {};
+    const exCounts = {};
+    lessonRows.forEach(r => {
+      const key = normalizeGrammarTopic(r.topic);
+      if (GRAMMAR_TYPES.includes(key)) lessonCounts[key] = (lessonCounts[key] || 0) + Number(r.count);
+    });
+    exRows.forEach(r => {
+      const key = normalizeGrammarTopic(r.grammar_topic);
+      if (GRAMMAR_TYPES.includes(key)) exCounts[key] = (exCounts[key] || 0) + Number(r.count);
+    });
+    const result = GRAMMAR_TYPES.map(name => ({
+      name,
+      lessonCount: lessonCounts[name] || 0,
+      exerciseCount: exCounts[name] || 0
+    })).filter(t => {
+      if (kind === 'theory') return t.lessonCount > 0;
+      if (kind === 'exercises') return t.exerciseCount > 0;
+      return t.lessonCount > 0 || t.exerciseCount > 0;
+    }).map(t => ({
+      name: t.name,
+      count: kind === 'theory' ? t.lessonCount : kind === 'exercises' ? t.exerciseCount : t.lessonCount + t.exerciseCount,
+      lessonCount: t.lessonCount,
+      exerciseCount: t.exerciseCount
+    }));
+    res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/grammar/lessons-by-type/:type', async (req, res) => {
   try {
-    const rows = await query('SELECT * FROM grammar_lessons WHERE topic = ? ORDER BY id', [req.params.type]);
+    const type = normalizeGrammarTopic(decodeURIComponent(req.params.type));
+    const variants = grammarTopicVariants(type);
+    const placeholders = variants.map(() => '?').join(',');
+    const rows = await query(`SELECT * FROM grammar_lessons WHERE topic IN (${placeholders}) ORDER BY id`, variants);
     res.json(rows);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/grammar/exercises-by-type/:type', async (req, res) => {
   try {
-    const rows = await query('SELECT * FROM grammar_exercises WHERE grammar_topic = ? ORDER BY id', [req.params.type]);
+    const type = normalizeGrammarTopic(decodeURIComponent(req.params.type));
+    const variants = grammarTopicVariants(type);
+    const placeholders = variants.map(() => '?').join(',');
+    const userId = req.query.userId;
+    const rows = await query(`SELECT * FROM grammar_exercises WHERE grammar_topic IN (${placeholders}) ORDER BY day_number, id`, variants);
     rows.forEach(r => { if (typeof r.options === 'string') r.options = JSON.parse(r.options); });
+
+    if (userId) {
+      const progress = await query(
+        `SELECT activity_id, answer_text, score FROM user_progress
+         WHERE user_id = ? AND activity_type = 'grammar_exercise'
+         ORDER BY id DESC`,
+        [userId]
+      );
+      const doneMap = {};
+      progress.forEach(p => {
+        if (!doneMap[p.activity_id]) {
+          doneMap[p.activity_id] = { selected: p.answer_text, correct: p.score >= 100 };
+        }
+      });
+      rows.forEach(r => {
+        if (doneMap[r.id]) {
+          r.user_answer = doneMap[r.id].selected;
+          r.user_correct = doneMap[r.id].correct;
+          r.done = true;
+        }
+      });
+    }
     res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/grammar/answer', async (req, res) => {
+  try {
+    const { userId, exerciseId, selected, correct } = req.body;
+    if (!userId || !exerciseId) return res.status(400).json({ error: 'Missing userId or exerciseId' });
+    const score = correct ? 100 : 0;
+    const existing = await query(
+      'SELECT id FROM user_progress WHERE user_id = ? AND activity_type = ? AND activity_id = ?',
+      [userId, 'grammar_exercise', exerciseId]
+    );
+    if (existing.length) {
+      await query(
+        'UPDATE user_progress SET score = ?, answer_text = ?, completed = 1 WHERE id = ?',
+        [score, selected || '', existing[0].id]
+      );
+    } else {
+      await query(
+        'INSERT INTO user_progress (user_id, activity_type, activity_id, score, completed, answer_text) VALUES (?, ?, ?, ?, 1, ?)',
+        [userId, 'grammar_exercise', exerciseId, score, selected || '']
+      );
+    }
+    res.json({ success: true, correct });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1108,8 +1197,17 @@ app.get('/api/admin/vocabulary', async (req, res) => {
 
 app.get('/api/admin/vocabulary/categories', async (req, res) => {
   try {
-    const rows = await query('SELECT DISTINCT category, COUNT(*) as count FROM vocabulary GROUP BY category ORDER BY category');
-    res.json(rows);
+    const rows = await query('SELECT category, COUNT(*) as count FROM vocabulary GROUP BY category');
+    const countMap = Object.fromEntries(rows.map(r => [r.category, Number(r.count)]));
+    const result = VOCAB_CATEGORIES
+      .filter(c => countMap[c])
+      .map(c => ({ category: c, count: countMap[c] }));
+    rows.forEach(r => {
+      if (!VOCAB_CATEGORIES.includes(r.category)) {
+        result.push({ category: r.category, count: Number(r.count) });
+      }
+    });
+    res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1117,8 +1215,9 @@ app.post('/api/admin/vocabulary', async (req, res) => {
   try {
     const { term, word_type, definition_vi, definition_en, category, example1, example2, example3, day_number } = req.body;
     if (!term) return res.status(400).json({ error: 'Term is required' });
+    const cat = normalizeVocabCategory(category || 'IT');
     const result = await query('INSERT INTO vocabulary (term, word_type, definition_vi, definition_en, category, example1, example2, example3, day_number) VALUES (?,?,?,?,?,?,?,?,?)',
-      [term, word_type || 'n.', definition_vi || '', definition_en || '', category || 'General', example1 || '', example2 || '', example3 || '', day_number || 1]);
+      [term, word_type || 'n.', definition_vi || '', definition_en || '', cat, example1 || '', example2 || '', example3 || '', day_number || 1]);
     res.json({ success: true, id: result.insertId });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -1126,8 +1225,9 @@ app.post('/api/admin/vocabulary', async (req, res) => {
 app.put('/api/admin/vocabulary/:id', async (req, res) => {
   try {
     const { term, word_type, definition_vi, definition_en, category, example1, example2, example3, day_number } = req.body;
+    const cat = normalizeVocabCategory(category);
     await query('UPDATE vocabulary SET term=?, word_type=?, definition_vi=?, definition_en=?, category=?, example1=?, example2=?, example3=?, day_number=? WHERE id=?',
-      [term, word_type, definition_vi, definition_en, category, example1, example2, example3, day_number, req.params.id]);
+      [term, word_type, definition_vi, definition_en, cat, example1, example2, example3, day_number, req.params.id]);
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

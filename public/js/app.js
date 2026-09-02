@@ -647,42 +647,76 @@ function daySelector(total, active, onChange) {
 }
 
 // ===== VOCABULARY =====
-const VOCAB_CAT_ICONS = { 'Algorithms': '🧮', 'Data Systems': '🗄️', 'Hardware & Infrastructure': '🖥️', 'Testing & QA': '🧪', 'DevOps': '⚙️', 'Frontend': '🎨', 'Backend': '🔧', 'Database': '🗃️', 'Security': '🔒', 'Networking': '🌐', 'Cloud': '☁️', 'Mobile': '📱', 'AI/ML': '🤖' };
+const VOCAB_CAT_ICONS = {
+  'IT': '💻', 'Công sở': '💼', 'Giao tiếp': '💬', 'Du lịch': '✈️',
+  'Ăn uống': '🍽️', 'Hàng ngày': '🏠', 'Sức khỏe': '🏥', 'Mua sắm': '🛒'
+};
+
+const VOCAB_PAGE_SIZE = 24;
+let _vocabPage = 1;
 
 async function renderVocabulary() {
   const mc = $('mainContent');
   mc.innerHTML = `${pageHeader(t('vocab.title'))}
     <div class="category-filter" id="vocabCategoryFilter">
-      <button class="filter-btn active" onclick="loadVocabCategory('')">${t('vocab.all')}</button>
+      <button class="filter-btn active" onclick="loadVocabCategory('', 1)">${t('vocab.all')}</button>
     </div>
-    <div id="vocabList" class="vocab-grid"><div class="loading"><div class="spinner"></div></div></div>`;
+    <div id="vocabList" class="vocab-grid"><div class="loading"><div class="spinner"></div></div></div>
+    <div id="vocabPager" class="pager-bar"></div>`;
   try {
     const cats = await API.getVocabCategories(currentUser.id);
     const filterEl = $('vocabCategoryFilter');
     cats.forEach(c => {
       const cat = c.category || '';
       const icon = VOCAB_CAT_ICONS[cat] || '📂';
-      filterEl.innerHTML += `<button class="filter-btn" onclick="loadVocabCategory('${cat.replace(/'/g, "\\'")}')">${icon} ${cat} (${c.count})</button>`;
+      filterEl.innerHTML += `<button class="filter-btn" onclick="loadVocabCategory('${cat.replace(/'/g, "\\'")}', 1)">${icon} ${cat} (${c.count})</button>`;
     });
   } catch(e) {}
-  loadVocabCategory('');
+  loadVocabCategory('', 1);
 }
 
-async function loadVocabCategory(cat) {
+async function loadVocabCategory(cat, page) {
   window._vocabCategory = cat;
+  if (page) _vocabPage = page;
   document.querySelectorAll('#vocabCategoryFilter .filter-btn').forEach((b, i) => {
     b.classList.toggle('active', (cat === '' && i === 0) || (cat && b.textContent.includes(cat)));
   });
+  const listEl = $('vocabList');
+  if (listEl) listEl.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
-    const words = await API.getVocabByCategory(currentUser.id, cat, 'all');
+    const res = await API.getVocabByCategory(currentUser.id, cat, 'all', _vocabPage, VOCAB_PAGE_SIZE);
+    const words = res.data || res;
+    const pagination = res.pagination || null;
     window._vocabWords = words;
-    renderVocabList(words);
-  } catch (e) { $('vocabList').innerHTML = `<p>Error: ${e.message}</p>`; }
+    window._vocabPagination = pagination;
+    renderVocabList(words, pagination);
+  } catch (e) { if (listEl) listEl.innerHTML = `<p>Error: ${e.message}</p>`; }
 }
 
-function renderVocabList(words) {
-  const catClass = { 'Algorithms': 'badge-algo', 'Data Systems': 'badge-data', 'Hardware & Infrastructure': 'badge-hw', 'Testing & QA': 'badge-algo' };
-  $('vocabList').innerHTML = words.length ? words.map((w, i) => `
+function renderVocabPager(pagination) {
+  const pager = $('vocabPager');
+  if (!pager) return;
+  if (!pagination) { pager.innerHTML = ''; return; }
+  const { page, total, totalPages } = pagination;
+  const from = total ? (page - 1) * VOCAB_PAGE_SIZE + 1 : 0;
+  const to = Math.min(page * VOCAB_PAGE_SIZE, total);
+  const catSafe = (window._vocabCategory || '').replace(/'/g, "\\'");
+  const info = i18n.currentLang === 'vi'
+    ? `Hiển thị ${from}–${to} / ${Number(total).toLocaleString()} từ`
+    : `Showing ${from}–${to} of ${Number(total).toLocaleString()} words`;
+  const pageLabel = i18n.currentLang === 'vi' ? `Trang ${page}/${totalPages}` : `Page ${page}/${totalPages}`;
+  pager.innerHTML = `
+    <span class="pager-info">${info}</span>
+    ${totalPages > 1 ? `<div class="pager-controls">
+      <button class="pager-btn" ${page <= 1 ? 'disabled' : ''} onclick="loadVocabCategory('${catSafe}', ${page - 1})">← ${t('vocab.page.prev')}</button>
+      <span class="pager-pages">${pageLabel}</span>
+      <button class="pager-btn" ${page >= totalPages ? 'disabled' : ''} onclick="loadVocabCategory('${catSafe}', ${page + 1})">${t('vocab.page.next')} →</button>
+    </div>` : ''}`;
+}
+
+function renderVocabList(words, pagination) {
+  const catClass = { 'IT': 'badge-algo', 'Công sở': 'badge-data', 'Giao tiếp': 'badge-hw', 'Du lịch': 'badge-algo', 'Ăn uống': 'badge-data', 'Hàng ngày': 'badge-hw', 'Sức khỏe': 'badge-algo', 'Mua sắm': 'badge-data' };
+  $('vocabList').innerHTML = words.length ? words.map((w) => `
     <div class="vocab-card ${w.learned ? 'learned' : ''}" onclick="this.classList.toggle('expanded')">
       <div class="flex-between"><span class="badge ${catClass[w.category] || ''}">${w.category}</span>
         ${w.mastery_level > 0 ? `<span class="mastery-stars">${'★'.repeat(w.mastery_level)}${'☆'.repeat(5 - w.mastery_level)}</span>` : ''}
@@ -702,6 +736,7 @@ function renderVocabList(words) {
         </div>
       </div>
     </div>`).join('') : '<p style="color:var(--text-muted)">Chưa có từ vựng trong chủ đề này.</p>';
+  renderVocabPager(pagination);
 }
 
 async function markLearned(vocabId, correct) {
@@ -711,7 +746,7 @@ async function markLearned(vocabId, correct) {
     const activeBtn = document.querySelector('#vocabCategoryFilter .filter-btn.active');
     const cat = activeBtn?.textContent?.includes('Tất cả') ? '' : (window._flashcardCategory || '');
     if ($('flashcardArea')) loadFlashcardWords(_flashcardCategory, _flashcardFilter);
-    else if ($('vocabList')) loadVocabCategory(window._vocabCategory || '');
+    else if ($('vocabList')) loadVocabCategory(window._vocabCategory || '', _vocabPage);
   } catch (e) { toast(e.message, 'error'); }
 }
 
@@ -896,116 +931,286 @@ function checkFcQuiz(selectedId, correctId, optIndex) {
 }
 
 // ===== GRAMMAR =====
-let _grammarType = '';
+let _grammarTheoryType = '';
+let _grammarPracticeType = '';
+let _grammarTab = 'theory'; // theory | practice
+let _grammarExFilter = 'all'; // all | done | undone
 
 async function renderGrammar() {
   const mc = $('mainContent');
   mc.innerHTML = `${pageHeader(t('gram.title'))}
-    <div id="grammarTypeFilter" class="category-filter" style="margin-bottom:16px"></div>
-    <div id="grammarLessons"></div>
-    <div id="grammarList"></div>`;
+    <div class="tabs" id="grammarContentTabs">
+      <button class="tab ${_grammarTab === 'theory' ? 'active' : ''}" onclick="switchGrammarUserTab('theory')">${t('gram.tab.theory')}</button>
+      <button class="tab ${_grammarTab === 'practice' ? 'active' : ''}" onclick="switchGrammarUserTab('practice')">${t('gram.tab.practice')}</button>
+    </div>
+    <div id="grammarLessons" class="${_grammarTab !== 'theory' ? 'hidden' : ''}">
+      <div id="grammarTheoryFilter" class="category-filter grammar-tab-filter"></div>
+      <div id="grammarTheoryContent"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+    <div id="grammarList" class="${_grammarTab !== 'practice' ? 'hidden' : ''}">
+      <div id="grammarPracticeFilter" class="category-filter grammar-tab-filter"></div>
+      <div id="grammarPracticeContent"><div class="loading"><div class="spinner"></div></div></div>
+    </div>`;
+  await loadGrammarTab(_grammarTab);
+}
+
+async function switchGrammarUserTab(tab) {
+  _grammarTab = tab;
+  document.querySelectorAll('#grammarContentTabs .tab').forEach((b, i) => {
+    b.classList.toggle('active', (tab === 'theory' && i === 0) || (tab === 'practice' && i === 1));
+  });
+  const lessonsEl = $('grammarLessons');
+  const listEl = $('grammarList');
+  if (lessonsEl) lessonsEl.classList.toggle('hidden', tab !== 'theory');
+  if (listEl) listEl.classList.toggle('hidden', tab !== 'practice');
+  await loadGrammarTab(tab);
+}
+
+function renderGrammarTypeFilter(types, activeType, filterId, onSelectFn) {
+  const el = $(filterId);
+  if (!el) return;
+  if (!types.length) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = types.map(tp => {
+    const safe = tp.name.replace(/'/g, "\\'");
+    const count = tp.count || tp.lessonCount || tp.exerciseCount || 0;
+    return `<button class="filter-btn ${tp.name === activeType ? 'active' : ''}" onclick="${onSelectFn}('${safe}')">${tp.name} (${count})</button>`;
+  }).join('');
+}
+
+async function loadGrammarTab(tab) {
+  const kind = tab === 'theory' ? 'theory' : 'exercises';
   try {
-    const types = await API.getGrammarTypes();
-    const filterEl = $('grammarTypeFilter');
-    if (!types.length) {
-      filterEl.innerHTML = '<p style="color:var(--text-muted)">Chưa có dạng ngữ pháp.</p>';
-      return;
+    const types = await API.getGrammarTypes(kind);
+    if (tab === 'theory') {
+      if (!_grammarTheoryType || !types.find(t => t.name === _grammarTheoryType)) {
+        _grammarTheoryType = types[0]?.name || '';
+      }
+      renderGrammarTypeFilter(types, _grammarTheoryType, 'grammarTheoryFilter', 'selectGrammarTheoryType');
+      if (_grammarTheoryType) await loadGrammarTheory(_grammarTheoryType);
+      else if ($('grammarTheoryContent')) $('grammarTheoryContent').innerHTML = `<div class="card grammar-empty"><p style="color:var(--text-muted);padding:24px;text-align:center">${t('gram.no.theory')}</p></div>`;
+    } else {
+      if (!_grammarPracticeType || !types.find(t => t.name === _grammarPracticeType)) {
+        _grammarPracticeType = types[0]?.name || '';
+      }
+      renderGrammarTypeFilter(types, _grammarPracticeType, 'grammarPracticeFilter', 'selectGrammarPracticeType');
+      if (_grammarPracticeType) await loadGrammarPracticeType(_grammarPracticeType);
+      else if ($('grammarPracticeContent')) $('grammarPracticeContent').innerHTML = `<div class="card grammar-empty"><p style="color:var(--text-muted);padding:24px;text-align:center">${t('gram.no.exercises')}</p></div>`;
     }
-    filterEl.innerHTML = types.map(tp => {
-      const safe = tp.name.replace(/'/g, "\\'");
-      return `<button class="filter-btn ${tp.name === _grammarType ? 'active' : ''}" onclick="loadGrammarType('${safe}')">${tp.name} (${tp.count || 0})</button>`;
-    }).join('');
-    if (!_grammarType) _grammarType = types[0].name;
-    loadGrammarType(_grammarType);
-  } catch (e) { $('grammarLessons').innerHTML = `<p>Error: ${e.message}</p>`; }
+  } catch (e) {
+    const target = tab === 'theory' ? 'grammarTheoryContent' : 'grammarPracticeContent';
+    if ($(target)) $(target).innerHTML = `<p>Error: ${e.message}</p>`;
+  }
+}
+
+async function selectGrammarTheoryType(type) {
+  _grammarTheoryType = type;
+  document.querySelectorAll('#grammarTheoryFilter .filter-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.startsWith(type));
+  });
+  await loadGrammarTheory(type);
+}
+
+async function selectGrammarPracticeType(type) {
+  _grammarPracticeType = type;
+  _grammarExFilter = 'all';
+  document.querySelectorAll('#grammarPracticeFilter .filter-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.startsWith(type));
+  });
+  await loadGrammarPracticeType(type);
+}
+
+async function loadGrammarTheory(type) {
+  const el = $('grammarTheoryContent');
+  if (!el) return;
+  el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const lessons = await API.getGrammarLessonsByType(type);
+    el.innerHTML = renderGrammarTheory(type, lessons);
+  } catch (e) { el.innerHTML = `<p>Error: ${e.message}</p>`; }
+}
+
+async function loadGrammarPracticeType(type) {
+  const el = $('grammarPracticeContent');
+  if (!el) return;
+  el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const exercises = await API.getGrammarExercisesByType(type, currentUser?.id);
+    el.innerHTML = renderGrammarPractice(type, exercises);
+    window._grammarTotal = exercises.length;
+    window._grammarCorrect = exercises.filter(e => e.done && e.user_correct).length;
+    window._grammarDone = exercises.filter(e => e.done).length;
+    updateGrammarScore(exercises);
+  } catch (e) { el.innerHTML = `<p>Error: ${e.message}</p>`; }
+}
+
+function renderGrammarTheory(type, lessons) {
+  if (!lessons || !lessons.length) {
+    return `<div class="card grammar-empty"><p style="color:var(--text-muted);padding:24px;text-align:center">${t('gram.no.theory')}</p></div>`;
+  }
+  return `<div class="grammar-theory-wrap">
+    <div class="grammar-section-header">
+      <h3>${t('gram.theory.section')}</h3>
+      <span class="badge badge-algo">${escHtml(type)}</span>
+    </div>
+    ${lessons.map(l => `
+      <div class="card grammar-theory-card">
+        <div class="grammar-theory-head">
+          <span class="grammar-theory-icon">📗</span>
+          <div>
+            <h4 class="grammar-theory-title">${escHtml(l.title_vi)}</h4>
+            <span class="grammar-topic-badge">${escHtml(l.topic || type)}</span>
+          </div>
+        </div>
+        <div class="grammar-theory-body">
+          <div class="grammar-theory-content">${escHtml(l.content_vi).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')}</div>
+          ${l.examples_vi ? `<div class="grammar-box grammar-box-example">
+            <strong>${t('gram.theory.example')}</strong>
+            <div>${escHtml(l.examples_vi).replace(/\n/g, '<br>')}</div>
+          </div>` : ''}
+          ${l.tips_vi ? `<div class="grammar-box grammar-box-tip">
+            💡 <strong>${t('gram.theory.tip')}</strong> ${escHtml(l.tips_vi)}
+          </div>` : ''}
+        </div>
+      </div>`).join('')}
+  </div>`;
+}
+
+function groupGrammarExercises(exercises) {
+  const groups = {};
+  exercises.forEach(ex => {
+    const key = ex.day_number || 1;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(ex);
+  });
+  return Object.keys(groups).sort((a, b) => a - b).map(k => ({ day: parseInt(k), items: groups[k] }));
+}
+
+function renderGrammarExerciseItem(ex, idx) {
+  const done = ex.done;
+  const optsHtml = ex.options.map((opt, j) => {
+    const safeOpt = opt.replace(/'/g, "\\'");
+    const safeCorrect = ex.correct_answer.replace(/'/g, "\\'");
+    let cls = 'quiz-option';
+    if (done) {
+      if (opt.trim() === ex.correct_answer.trim()) cls += ' correct';
+      else if (opt.trim() === (ex.user_answer || '').trim() && !ex.user_correct) cls += ' incorrect selected';
+      else if (opt.trim() === (ex.user_answer || '').trim()) cls += ' selected';
+    }
+    const onclick = done ? '' : `onclick="checkGrammar(${ex.id},'${safeOpt}','${safeCorrect}',${j},${ex.options.length})"`;
+    return `<label class="${cls}" id="gopt-${ex.id}-${j}" ${onclick}><span>${escHtml(opt)}</span></label>`;
+  }).join('');
+  return `
+    <div class="quiz-question ${done ? 'quiz-done' : ''}" id="grammar-${ex.id}" ${done ? 'data-done="1"' : ''}>
+      <div class="quiz-question-head">
+        <h4>Q${idx + 1}. ${escHtml(ex.question)}</h4>
+        ${done ? `<span class="quiz-status ${ex.user_correct ? 'quiz-status-ok' : 'quiz-status-fail'}">${ex.user_correct ? '✓ ' + t('gram.done.correct') : '✗ ' + t('gram.done.wrong')}</span>` : ''}
+      </div>
+      <div class="quiz-options">${optsHtml}</div>
+      <div id="gexpl-${ex.id}" class="${done ? '' : 'hidden'}" style="margin-top:12px;padding:12px;background:var(--info-bg,#eff6ff);border-radius:var(--radius);font-size:14px;color:var(--info,#1d4ed8)">
+        💡 ${escHtml(ex.explanation || '')}
+      </div>
+    </div>`;
+}
+
+function renderGrammarPractice(type, exercises) {
+  const filtered = exercises.filter(ex => {
+    if (_grammarExFilter === 'done') return ex.done;
+    if (_grammarExFilter === 'undone') return !ex.done;
+    return true;
+  });
+  const doneCount = exercises.filter(e => e.done).length;
+  const groups = groupGrammarExercises(filtered);
+  const typeSafe = type.replace(/'/g, "\\'");
+
+  if (!exercises.length) {
+    return `<div class="card grammar-empty"><p style="color:var(--text-muted);padding:24px;text-align:center">${t('gram.no.exercises')}</p></div>`;
+  }
+
+  return `<div class="grammar-practice-wrap">
+    <div class="grammar-section-header">
+      <h3>${t('gram.practice.title')}</h3>
+      <span class="badge badge-data">${escHtml(type)}</span>
+    </div>
+    <div class="grammar-progress-bar">
+      <div class="grammar-progress-fill" style="width:${exercises.length ? Math.round(doneCount / exercises.length * 100) : 0}%"></div>
+      <span class="grammar-progress-text">${doneCount}/${exercises.length} ${t('gram.done.count')}</span>
+    </div>
+    <div class="category-filter" style="margin-bottom:16px">
+      <button class="filter-btn ${_grammarExFilter === 'all' ? 'active' : ''}" onclick="setGrammarExFilter('all','${typeSafe}')">${t('gram.filter.all')}</button>
+      <button class="filter-btn ${_grammarExFilter === 'undone' ? 'active' : ''}" onclick="setGrammarExFilter('undone','${typeSafe}')">${t('gram.filter.undone')}</button>
+      <button class="filter-btn ${_grammarExFilter === 'done' ? 'active' : ''}" onclick="setGrammarExFilter('done','${typeSafe}')">${t('gram.filter.done')}</button>
+    </div>
+    ${filtered.length ? groups.map(g => `
+      <div class="card grammar-part-card">
+        <div class="card-header"><h3 class="card-title">${t('gram.part')} ${g.day} <span class="grammar-part-meta">(${g.items.length} ${t('gram.questions')})</span></h3></div>
+        <div style="padding:16px">${g.items.map((ex, i) => renderGrammarExerciseItem(ex, i)).join('')}</div>
+      </div>`).join('') : `<p style="color:var(--text-muted);text-align:center;padding:24px">${t('gram.filter.empty')}</p>`}
+    <div id="grammarScore" class="hidden card text-center"></div>
+  </div>`;
+}
+
+function setGrammarExFilter(filter, type) {
+  _grammarExFilter = filter;
+  loadGrammarPracticeType(type || _grammarPracticeType);
 }
 
 async function loadGrammarType(type) {
-  _grammarType = type;
-  document.querySelectorAll('#grammarTypeFilter .filter-btn').forEach(b => {
-    b.classList.toggle('active', b.textContent.startsWith(type));
-  });
-
-  // 1. Load theory lessons for this type
-  try {
-    const lessons = await API.getGrammarLessonsByType(type);
-    if (lessons && lessons.length) {
-      $('grammarLessons').innerHTML = `<div class="card" style="margin-bottom:20px;border-left:4px solid var(--leaf)">
-        <div class="card-header"><h3 class="card-title">${t('gram.theory.title')}: ${escHtml(type)}</h3></div>
-        ${lessons.map(l => {
-          const title = l.title_vi;
-          const content = l.content_vi;
-          const examples = l.examples_vi;
-          const tips = l.tips_vi;
-          return `
-          <div style="padding:16px;border-bottom:1px solid var(--border)">
-            <h4 style="cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="this.parentElement.querySelector('.lesson-body').classList.toggle('hidden')">
-              <span>📗 ${title}</span>
-              <span style="font-size:12px;color:var(--text-muted)">${t('gram.theory.expand')}</span>
-            </h4>
-            <div class="lesson-body" style="margin-top:12px">
-              <div style="white-space:pre-line;font-size:14px;line-height:1.8;color:var(--text-secondary)">${content}</div>
-              ${examples ? `<div style="margin-top:12px;padding:12px;background:var(--green-50,#f0fdf4);border-radius:var(--radius);font-size:13px">
-                <strong>${t('gram.theory.example')}</strong><br><span style="white-space:pre-line">${examples}</span></div>` : ''}
-              ${tips ? `<div style="margin-top:8px;padding:12px;background:var(--info-bg,#eff6ff);border-radius:var(--radius);font-size:13px;color:var(--info,#1d4ed8)">
-                💡 <strong>${t('gram.theory.tip')}</strong> ${tips}</div>` : ''}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>`;
-      $('grammarLessons').innerHTML += `
-        <div style="text-align:center; margin: 24px 0 32px 0;">
-          <h3 style="margin-bottom:8px;color:#16a34a">${t('gram.practice.ready')}</h3>
-          <p style="color:#666;margin-bottom:16px;font-size:14px">${t('gram.practice.desc')}</p>
-          <button class="btn btn-primary" style="padding:12px 32px; font-size:16px; width:100%; max-width:400px; box-shadow:0 4px 12px rgba(22,163,74,0.3)" onclick="document.getElementById('grammarListCont').classList.remove('hidden');this.parentElement.style.display='none';window.scrollTo({top: document.getElementById('grammarListCont').offsetTop - 80, behavior: 'smooth'})">${t('gram.practice.start')}</button>
-        </div>`;
-    } else {
-      $('grammarLessons').innerHTML = '';
-    }
-  } catch (e) { $('grammarLessons').innerHTML = ''; }
-
-  const hasTheory = $('grammarLessons').innerHTML.trim().length > 0;
-  
-  try {
-    const exercises = await API.getGrammarExercisesByType(type);
-    $('grammarList').innerHTML = `<div id="grammarListCont" class="${hasTheory ? 'hidden' : ''}">` + (exercises.length ? `<div class="card"><div class="card-header"><h3 class="card-title">${t('gram.practice.title')}</h3></div><div style="padding:16px">` + exercises.map((ex, i) => `
-      <div class="quiz-question" id="grammar-${ex.id}">
-        <h4>Q${i + 1}. ${ex.question} <span class="badge badge-algo">${ex.grammar_topic || ''}</span></h4>
-        <div class="quiz-options">${ex.options.map((opt, j) => `
-          <label class="quiz-option" id="gopt-${ex.id}-${j}" onclick="checkGrammar(${ex.id},'${opt.replace(/'/g, "\\'")}','${ex.correct_answer.replace(/'/g, "\\'")}',${j},${ex.options.length})">
-            <span>${opt}</span>
-          </label>`).join('')}
-        </div>
-        <div id="gexpl-${ex.id}" class="hidden" style="margin-top:12px;padding:12px;background:var(--info-bg);border-radius:var(--radius);font-size:14px;color:var(--info)">
-          💡 ${ex.explanation || ''}
-        </div>
-      </div>`).join('') + '</div></div><div id="grammarScore" class="hidden card text-center"></div>'
-      : `<p style="color:var(--text-muted)">${t('gram.no.exercises')}</p>`) + '</div>';
-    window._grammarTotal = exercises.length;
-    window._grammarCorrect = 0;
-    window._grammarDone = 0;
-  } catch (e) { $('grammarList').innerHTML = `<p>Error: ${e.message}</p>`; }
+  if (_grammarTab === 'theory') await selectGrammarTheoryType(type);
+  else await selectGrammarPracticeType(type);
 }
 
-function checkGrammar(id, selected, correct, idx, total) {
+function updateGrammarScore(exercises) {
+  const done = exercises.filter(e => e.done).length;
+  const total = exercises.length;
+  if (done < total || !total) return;
+  const correct = exercises.filter(e => e.user_correct).length;
+  const score = Math.round((correct / total) * 100);
+  const el = document.getElementById('grammarScore');
+  if (!el) return;
+  el.classList.remove('hidden');
+  el.innerHTML = `<div class="score-circle ${score >= 80 ? 'score-high' : score >= 50 ? 'score-mid' : 'score-low'}">${score}%</div><p style="font-size:16px;font-weight:600;margin-top:8px">${correct}/${total} ${t('gram.correct')}</p>`;
+}
+
+async function checkGrammar(id, selected, correct, idx, total) {
   const q = document.getElementById(`grammar-${id}`);
-  if (q.dataset.done) return;
+  if (!q || q.dataset.done) return;
   q.dataset.done = '1';
+  q.classList.add('quiz-done');
   const isCorrect = selected === correct;
   for (let i = 0; i < total; i++) {
     const el = document.getElementById(`gopt-${id}-${i}`);
+    if (!el) continue;
     if (el.textContent.trim() === correct) el.classList.add('correct');
     else if (i === idx && !isCorrect) el.classList.add('incorrect');
+    else if (i === idx) el.classList.add('selected');
   }
-  document.getElementById(`gexpl-${id}`).classList.remove('hidden');
-  window._grammarDone++;
-  if (isCorrect) window._grammarCorrect++;
-  if (window._grammarDone === window._grammarTotal) {
-    const score = Math.round((window._grammarCorrect / window._grammarTotal) * 100);
+  const expl = document.getElementById(`gexpl-${id}`);
+  if (expl) expl.classList.remove('hidden');
+  const head = q.querySelector('.quiz-question-head');
+  if (head && !head.querySelector('.quiz-status')) {
+    head.insertAdjacentHTML('beforeend', `<span class="quiz-status ${isCorrect ? 'quiz-status-ok' : 'quiz-status-fail'}">${isCorrect ? '✓ ' + t('gram.done.correct') : '✗ ' + t('gram.done.wrong')}</span>`);
+  }
+  try {
+    await API.submitGrammarAnswer(currentUser.id, id, selected, isCorrect);
+  } catch (_) {}
+  window._grammarDone = (window._grammarDone || 0) + 1;
+  if (isCorrect) window._grammarCorrect = (window._grammarCorrect || 0) + 1;
+  const progressFill = document.querySelector('.grammar-progress-fill');
+  const progressText = document.querySelector('.grammar-progress-text');
+  const totalEx = window._grammarTotal || 0;
+  if (progressFill && totalEx) progressFill.style.width = Math.round(window._grammarDone / totalEx * 100) + '%';
+  if (progressText && totalEx) progressText.textContent = `${window._grammarDone}/${totalEx} ${t('gram.done.count')}`;
+  if (window._grammarDone === totalEx && totalEx) {
+    const score = Math.round((window._grammarCorrect / totalEx) * 100);
     const el = document.getElementById('grammarScore');
-    el.classList.remove('hidden');
-    el.innerHTML = `<div class="score-circle ${score >= 80 ? 'score-high' : score >= 50 ? 'score-mid' : 'score-low'}">${score}%</div><p style="font-size:16px;font-weight:600;margin-top:8px">${window._grammarCorrect}/${window._grammarTotal} correct</p>`;
-    API.trackActivity(currentUser.id, 'grammar', _grammarType, score);
+    if (el) {
+      el.classList.remove('hidden');
+      el.innerHTML = `<div class="score-circle ${score >= 80 ? 'score-high' : score >= 50 ? 'score-mid' : 'score-low'}">${score}%</div><p style="font-size:16px;font-weight:600;margin-top:8px">${window._grammarCorrect}/${totalEx} ${t('gram.correct')}</p>`;
+    }
+    API.trackActivity(currentUser.id, 'grammar', _grammarPracticeType, score);
   }
 }
 
