@@ -10,6 +10,7 @@ const { v4: uuidv4 } = require('uuid');
 const { query } = require('./db/database');
 const multer = require('multer');
 
+// Bổ sung cột created_at, last_login_at cho bảng users nếu DB cũ chưa có (lỗi "đã tồn tại" được bỏ qua)
 async function ensureUserColumns() {
   const alters = [
     'ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
@@ -40,6 +41,7 @@ const uploadAvatar = multer({ storage: avatarStorage, limits: { fileSize: 5 * 10
   else cb(new Error('Only image files allowed'));
 }});
 
+// Middleware chung: cho phép CORS, đọc body JSON thành req.body, phục vụ file tĩnh trong public/
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -53,6 +55,7 @@ app.get('/api/topics', async (req, res) => {
 });
 
 // ===== AUTH ROUTES =====
+// [API ĐANG DÙNG] Đăng ký: kiểm tra trùng username, băm mật khẩu bcrypt, tạo user + gán chủ đề (mặc định 'general'), trả về thông tin user
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, password, display_name, english_level, job_role, language, topics } = req.body;
@@ -91,6 +94,8 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+// [API ĐANG DÙNG] Đăng nhập (trang học + trang admin): tìm user theo username, so mật khẩu bcrypt,
+// cập nhật chuỗi ngày học (streak) và last_login_at, trả về thông tin user kèm role và danh sách chủ đề
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -130,6 +135,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// [API ĐANG DÙNG] Lấy hồ sơ user mới nhất (tên, email, avatar, role, ngày tạo, lần đăng nhập cuối)
 app.get('/api/auth/profile/:userId', async (req, res) => {
   try {
     const rows = await query('SELECT id, username, display_name, email, avatar_url, role, created_at, last_login_at FROM users WHERE id = ?', [req.params.userId]);
@@ -226,6 +232,7 @@ app.get('/api/vocabulary/category-list', (req, res) => {
   res.json(VOCAB_CATEGORIES);
 });
 
+// [API ĐANG DÙNG] Danh sách danh mục từ vựng kèm số từ mỗi danh mục (dùng cho Từ vựng và FlashCards)
 app.get('/api/vocabulary/categories', async (req, res) => {
   try {
     const rows = await query('SELECT category, COUNT(*) as count FROM vocabulary GROUP BY category');
@@ -242,6 +249,8 @@ app.get('/api/vocabulary/categories', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG] Lấy từ vựng theo danh mục + trạng thái học của user (lọc all/learned/unlearned);
+// có page/limit thì trả { data, pagination } (trang Từ vựng), không có thì trả mảng (FlashCards)
 app.get('/api/vocabulary/by-category/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -311,6 +320,7 @@ app.get('/api/vocabulary/daily/:userId', async (req, res) => {
   }
 });
 
+// [API ĐANG DÙNG] Lấy toàn bộ từ vựng (lọc theo category) — Đọc truyện dùng để gạch chân từ song ngữ
 app.get('/api/vocabulary/all', async (req, res) => {
   try {
     const category = req.query.category;
@@ -328,6 +338,7 @@ app.get('/api/vocabulary/all', async (req, res) => {
   }
 });
 
+// [API ĐANG DÙNG] Đánh dấu "Đã biết"/"Ôn lại" một từ: cập nhật user_vocabulary (số lần ôn, đúng, mức thuộc) và daily_stats
 app.post('/api/vocabulary/learn', async (req, res) => {
   try {
     const { userId, vocabularyId, correct } = req.body;
@@ -364,6 +375,7 @@ app.post('/api/vocabulary/learn', async (req, res) => {
 // ===== READING ROUTES =====
 const READING_TOPIC = { name: 'IT', icon: '💻' };
 
+// Gom mọi danh mục bài đọc về một chủ đề duy nhất 'IT'
 function normalizeReadingCategory(cat) {
   return 'IT';
 }
@@ -375,6 +387,7 @@ app.get('/api/reading/topics', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG] Danh sách truyện (id, tiêu đề) cho trang Đọc truyện, lọc theo category
 app.get('/api/reading/list', async (req, res) => {
   try {
     const category = req.query.category;
@@ -385,6 +398,7 @@ app.get('/api/reading/list', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG] Chi tiết một truyện (nội dung đầy đủ) để hiển thị đọc song ngữ
 app.get('/api/reading/story/:id', async (req, res) => {
   try {
     const rows = await query('SELECT * FROM reading_passages WHERE id = ?', [req.params.id]);
@@ -459,6 +473,7 @@ const GRAMMAR_TOPIC_ALIASES = {
   'Correlative Conjunctions': 'Liên từ (Conjunctions)', 'Subject-Verb Agreement': 'Thì (Tenses)'
 };
 
+// Chuẩn hóa tên dạng ngữ pháp: đổi tên tiếng Anh cũ (VD 'Tenses') về tên chuẩn trong GRAMMAR_TYPES
 function normalizeGrammarTopic(topic) {
   if (!topic) return '';
   const t = String(topic).trim();
@@ -466,6 +481,7 @@ function normalizeGrammarTopic(topic) {
   return GRAMMAR_TOPIC_ALIASES[t] || t;
 }
 
+// Trả về tên chuẩn + mọi tên cũ trỏ về nó, để truy vấn SQL IN (...) bắt được cả dữ liệu cũ
 function grammarTopicVariants(canonical) {
   const variants = [canonical];
   Object.entries(GRAMMAR_TOPIC_ALIASES).forEach(([alias, target]) => {
@@ -474,6 +490,7 @@ function grammarTopicVariants(canonical) {
   return [...new Set(variants)];
 }
 
+// [API ĐANG DÙNG] Danh sách dạng ngữ pháp có dữ liệu kèm số bài; kind=theory (lý thuyết) | exercises (bài tập) | all
 app.get('/api/grammar/types', async (req, res) => {
   try {
     const kind = req.query.kind || 'all'; // theory | exercises | all
@@ -507,6 +524,7 @@ app.get('/api/grammar/types', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG] Bài lý thuyết ngữ pháp theo một dạng (tab Lý thuyết)
 app.get('/api/grammar/lessons-by-type/:type', async (req, res) => {
   try {
     const type = normalizeGrammarTopic(decodeURIComponent(req.params.type));
@@ -517,6 +535,7 @@ app.get('/api/grammar/lessons-by-type/:type', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG] Bài tập ngữ pháp theo dạng (tab Bài tập); có userId thì gắn thêm đáp án user đã chọn và đúng/sai
 app.get('/api/grammar/exercises-by-type/:type', async (req, res) => {
   try {
     const type = normalizeGrammarTopic(decodeURIComponent(req.params.type));
@@ -551,6 +570,7 @@ app.get('/api/grammar/exercises-by-type/:type', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG] Lưu câu trả lời một bài tập ngữ pháp vào user_progress (đúng = 100 điểm, sai = 0)
 app.post('/api/grammar/answer', async (req, res) => {
   try {
     const { userId, exerciseId, selected, correct } = req.body;
@@ -746,6 +766,7 @@ app.get('/api/progress/:userId', async (req, res) => {
   }
 });
 
+// [API ĐANG DÙNG] Ghi nhận hoàn thành một hoạt động (VD làm xong bộ bài tập ngữ pháp) vào user_progress và cộng daily_stats
 app.post('/api/progress/activity', async (req, res) => {
   try {
     const { userId, activityType, activityId, score } = req.body;
@@ -964,6 +985,7 @@ app.get('/api/companies/:id/detail', async (req, res) => {
 
 // ===== ADMIN ROUTES =====
 // Pagination helper
+// Đọc page/limit từ query string (limit tối đa 5000), trả về chuỗi LIMIT/OFFSET để nối vào SQL
 function getPagination(req) {
   const page = Math.max(1, parseInt(req.query.page) || 1);
   const limit = Math.min(5000, Math.max(1, parseInt(req.query.limit) || 100));
@@ -973,6 +995,7 @@ function getPagination(req) {
   return { page, limit, offset, limitSql };
 }
 
+// Parse chuỗi JSON an toàn: rỗng hoặc lỗi thì trả fallback, đã là object thì giữ nguyên
 function safeParseJson(val, fallback) {
   if (val == null || val === '') return fallback;
   if (typeof val === 'object') return val;
@@ -982,6 +1005,7 @@ function safeParseJson(val, fallback) {
   return fallback;
 }
 
+// [API ĐANG DÙNG - ADMIN] Trang Tổng quan: đếm số user, từ vựng, bài lý thuyết, bài tập ngữ pháp, truyện, video shadowing
 app.get('/api/admin/dashboard', async (req, res) => {
   try {
     const usersResult = await query('SELECT COUNT(*) as total FROM users');
@@ -1134,6 +1158,7 @@ app.put('/api/auth/topics', async (req, res) => {
 });
 
 // --- Admin Users CRUD ---
+// [API ĐANG DÙNG - ADMIN] Danh sách người dùng (phân trang, tìm theo username/tên hiển thị)
 app.get('/api/admin/users', async (req, res) => {
   try {
     const { page, limit, limitSql } = getPagination(req);
@@ -1151,6 +1176,7 @@ app.get('/api/admin/users', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG - ADMIN] Đổi quyền user: chỉ nhận 'role_admin' hoặc 'user'
 app.put('/api/admin/users/:id/role', async (req, res) => {
   try {
     const { role } = req.body;
@@ -1162,6 +1188,7 @@ app.put('/api/admin/users/:id/role', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG - ADMIN] Xóa user cùng toàn bộ dữ liệu học tập liên quan
 app.delete('/api/admin/users/:id', async (req, res) => {
   try {
     const userId = req.params.id;
@@ -1177,6 +1204,7 @@ app.delete('/api/admin/users/:id', async (req, res) => {
 });
 
 // --- Admin Vocabulary CRUD ---
+// [API ĐANG DÙNG - ADMIN] Danh sách từ vựng có phân trang, lọc theo danh mục và tìm theo từ/nghĩa
 app.get('/api/admin/vocabulary', async (req, res) => {
   try {
     const { page, limit, limitSql } = getPagination(req);
@@ -1195,6 +1223,7 @@ app.get('/api/admin/vocabulary', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG - ADMIN] Danh mục từ vựng kèm số lượng (đổ vào ô lọc danh mục)
 app.get('/api/admin/vocabulary/categories', async (req, res) => {
   try {
     const rows = await query('SELECT category, COUNT(*) as count FROM vocabulary GROUP BY category');
@@ -1211,6 +1240,7 @@ app.get('/api/admin/vocabulary/categories', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG - ADMIN] Thêm từ vựng mới (danh mục được chuẩn hóa)
 app.post('/api/admin/vocabulary', async (req, res) => {
   try {
     const { term, word_type, definition_vi, definition_en, category, example1, example2, example3, day_number } = req.body;
@@ -1222,6 +1252,7 @@ app.post('/api/admin/vocabulary', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG - ADMIN] Sửa một từ vựng
 app.put('/api/admin/vocabulary/:id', async (req, res) => {
   try {
     const { term, word_type, definition_vi, definition_en, category, example1, example2, example3, day_number } = req.body;
@@ -1232,6 +1263,7 @@ app.put('/api/admin/vocabulary/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG - ADMIN] Xóa từ vựng và tiến độ học của user với từ đó
 app.delete('/api/admin/vocabulary/:id', async (req, res) => {
   try {
     await query('DELETE FROM user_vocabulary WHERE vocabulary_id = ?', [req.params.id]);
@@ -1241,6 +1273,7 @@ app.delete('/api/admin/vocabulary/:id', async (req, res) => {
 });
 
 // --- Admin Grammar Lessons CRUD ---
+// [API ĐANG DÙNG - ADMIN] Danh sách bài lý thuyết ngữ pháp (phân trang)
 app.get('/api/admin/grammar-lessons', async (req, res) => {
   try {
     const { page, limit, limitSql } = getPagination(req);
@@ -1251,6 +1284,7 @@ app.get('/api/admin/grammar-lessons', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG - ADMIN] Thêm bài lý thuyết (bắt buộc tiêu đề + nội dung tiếng Việt)
 app.post('/api/admin/grammar-lessons', async (req, res) => {
   try {
     const { topic, title_vi, title_en, content_vi, content_en, examples_vi, examples_en, tips_vi, tips_en, day_number } = req.body;
@@ -1261,6 +1295,7 @@ app.post('/api/admin/grammar-lessons', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG - ADMIN] Sửa bài lý thuyết
 app.put('/api/admin/grammar-lessons/:id', async (req, res) => {
   try {
     const { topic, title_vi, title_en, content_vi, content_en, examples_vi, examples_en, tips_vi, tips_en, day_number } = req.body;
@@ -1271,6 +1306,7 @@ app.put('/api/admin/grammar-lessons/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG - ADMIN] Xóa bài lý thuyết
 app.delete('/api/admin/grammar-lessons/:id', async (req, res) => {
   try {
     await query('DELETE FROM grammar_lessons WHERE id = ?', [req.params.id]);
@@ -1279,6 +1315,7 @@ app.delete('/api/admin/grammar-lessons/:id', async (req, res) => {
 });
 
 // --- Admin Grammar CRUD ---
+// [API ĐANG DÙNG - ADMIN] Danh sách câu hỏi bài tập ngữ pháp (options được parse từ JSON)
 app.get('/api/admin/grammar', async (req, res) => {
   try {
     const { page, limit, limitSql } = getPagination(req);
@@ -1290,6 +1327,7 @@ app.get('/api/admin/grammar', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG - ADMIN] Thêm câu hỏi bài tập ngữ pháp (options lưu dạng chuỗi JSON)
 app.post('/api/admin/grammar', async (req, res) => {
   try {
     const { question, options, correct_answer, explanation, grammar_topic, day_number } = req.body;
@@ -1300,6 +1338,7 @@ app.post('/api/admin/grammar', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG - ADMIN] Sửa câu hỏi bài tập ngữ pháp
 app.put('/api/admin/grammar/:id', async (req, res) => {
   try {
     const { question, options, correct_answer, explanation, grammar_topic, day_number } = req.body;
@@ -1311,6 +1350,7 @@ app.put('/api/admin/grammar/:id', async (req, res) => {
 });
 
 // --- Dynamic YouTube Import ---
+// Dịch đoạn văn Anh → Việt qua endpoint Google Translate không chính thức (dùng khi import phụ đề YouTube)
 async function translateText(text) {
   const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=vi&dt=t&q=${encodeURIComponent(text)}`;
   const res = await fetch(url);
@@ -1318,10 +1358,13 @@ async function translateText(text) {
   return data[0].map(x => x[0]).join('');
 }
 
+// Giải mã ký tự đặc biệt XML (&amp; &lt; ...) trong phụ đề YouTube
 function unescapeXml(str) {
   return str.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 }
 
+// [API ĐANG DÙNG - ADMIN] Import video Shadowing: lấy phụ đề tiếng Anh từ YouTube, gộp câu theo thời gian,
+// dịch sang tiếng Việt theo lô 10 câu (tối đa 50 câu), rồi lưu vào bảng youtube_listening
 app.post('/api/admin/youtube-import', async (req, res) => {
   try {
     const { videoId, title, category, level, day_number } = req.body;
@@ -1388,6 +1431,7 @@ app.post('/api/admin/youtube-import', async (req, res) => {
   }
 });
 
+// [API ĐANG DÙNG - ADMIN] Xóa một video Shadowing
 app.delete('/api/admin/youtube-import/:id', async (req, res) => {
   try {
     await query('DELETE FROM youtube_listening WHERE id = ?', [req.params.id]);
@@ -1397,6 +1441,7 @@ app.delete('/api/admin/youtube-import/:id', async (req, res) => {
   }
 });
 
+// [API ĐANG DÙNG - ADMIN] Xóa câu hỏi bài tập ngữ pháp
 app.delete('/api/admin/grammar/:id', async (req, res) => {
   try {
     await query('DELETE FROM grammar_exercises WHERE id = ?', [req.params.id]);
@@ -1405,6 +1450,7 @@ app.delete('/api/admin/grammar/:id', async (req, res) => {
 });
 
 // --- Admin Reading CRUD ---
+// [API ĐANG DÙNG - ADMIN] Danh sách truyện/bài đọc (phân trang, lọc category, questions parse từ JSON)
 app.get('/api/admin/reading', async (req, res) => {
   try {
     const { page, limit, limitSql } = getPagination(req);
@@ -1431,6 +1477,7 @@ app.get('/api/admin/reading/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG - ADMIN] Thêm truyện/bài đọc (bắt buộc tiêu đề + nội dung)
 app.post('/api/admin/reading', async (req, res) => {
   try {
     const { title, content, category, questions, day_number } = req.body;
@@ -1443,6 +1490,7 @@ app.post('/api/admin/reading', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG - ADMIN] Sửa truyện/bài đọc
 app.put('/api/admin/reading/:id', async (req, res) => {
   try {
     const { title, content, category, questions, day_number } = req.body;
@@ -1455,6 +1503,7 @@ app.put('/api/admin/reading/:id', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG - ADMIN] Xóa truyện/bài đọc
 app.delete('/api/admin/reading/:id', async (req, res) => {
   try {
     await query('DELETE FROM reading_passages WHERE id = ?', [req.params.id]);
@@ -1643,12 +1692,14 @@ const LEGACY_SHADOWING_MAP = {
   'Công nghệ': 'IT', 'Phỏng vấn IT': 'IT', 'Phỏng vấn': 'IT'
 };
 
+// Đổi danh mục video cũ về 1 trong 3 chủ đề Shadowing: Hội thoại / Công sở / IT
 function normalizeShadowingCategory(cat) {
   if (!cat) return 'Hội thoại';
   if (SHADOWING_TOPICS.some(t => t.name === cat)) return cat;
   return LEGACY_SHADOWING_MAP[cat] || 'IT';
 }
 
+// [API ĐANG DÙNG] Danh sách chủ đề Shadowing kèm số video (trang học + admin)
 app.get('/api/shadowing/topics', async (req, res) => {
   try {
     const rows = await query('SELECT category FROM youtube_listening');
@@ -1661,6 +1712,7 @@ app.get('/api/shadowing/topics', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG] Danh sách video Shadowing (không kèm transcript), lọc theo chủ đề
 app.get('/api/youtube-listening', async (req, res) => {
   try {
     const { category } = req.query;
@@ -1671,6 +1723,7 @@ app.get('/api/youtube-listening', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// [API ĐANG DÙNG] Chi tiết một video Shadowing kèm transcript song ngữ (mảng { time, text, vi })
 app.get('/api/youtube-listening/:id', async (req, res) => {
   try {
     const rows = await query('SELECT * FROM youtube_listening WHERE id = ?', [req.params.id]);
@@ -1684,6 +1737,7 @@ app.get('/api/youtube-listening/:id', async (req, res) => {
 });
 
 // ===== VIDEO NOTES API =====
+// [API ĐANG DÙNG] Lưu câu phụ đề user bấm ⭐ trong Shadowing (trùng video + mốc thời gian thì cập nhật ghi chú)
 app.post('/api/video-notes', async (req, res) => {
   try {
     const { user_id, video_id, youtube_id, time, text_en, text_vi, category, note_description } = req.body;
@@ -1724,6 +1778,7 @@ app.put('/api/video-notes/:id', async (req, res) => {
 
 // ===== BLOG API =====
 // Public: list all published posts
+// [API ĐANG DÙNG - BLOG] Danh sách bài đã xuất bản kèm điểm sao trung bình và số bình luận
 app.get('/api/blog', async (req, res) => {
   try {
     const posts = await query(`SELECT id, slug, title, meta_description, category, author, thumbnail, view_count, created_at 
@@ -1739,6 +1794,7 @@ app.get('/api/blog', async (req, res) => {
 });
 
 // Public: get single post by slug
+// [API ĐANG DÙNG - BLOG] Chi tiết bài theo slug: tăng lượt xem, kèm bình luận đã duyệt và điểm sao
 app.get('/api/blog/:slug', async (req, res) => {
   try {
     const rows = await query('SELECT * FROM blog_posts WHERE slug = ? AND is_published = 1', [req.params.slug]);
@@ -1757,6 +1813,7 @@ app.get('/api/blog/:slug', async (req, res) => {
 });
 
 // Public: add comment
+// [API ĐANG DÙNG - BLOG] Gửi bình luận + số sao cho một bài viết
 app.post('/api/blog/:slug/comments', async (req, res) => {
   try {
     const { author_name, content, rating, user_id } = req.body;
@@ -1806,6 +1863,7 @@ app.post('/api/auth/avatar/:userId', uploadAvatar.single('avatar'), async (req, 
 });
 
 // ===== UPDATE EMAIL =====
+// [API ĐANG DÙNG] Lưu email cho user (popup bắt buộc nhập email khi vào app mà chưa có email)
 app.put('/api/auth/email', async (req, res) => {
   try {
     const { userId, email } = req.body;
@@ -1864,11 +1922,13 @@ app.put('/api/notifications/reminder', async (req, res) => {
 });
 
 // SPA fallback (exclude static files)
+// Mọi đường dẫn không phải API/file tĩnh (VD /vocabulary, /grammar) đều trả index.html để app.js tự điều hướng
 app.get('*', (req, res) => {
   if (req.path.includes('.')) return res.status(404).send('Not found');
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Khởi động server: kiểm tra kết nối MySQL, bổ sung cột/role còn thiếu, đảm bảo có dữ liệu mẫu, rồi lắng nghe cổng 3000
 async function start() {
   try {
     // Test database connection

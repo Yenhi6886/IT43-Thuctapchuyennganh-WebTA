@@ -258,14 +258,17 @@
   <script>
     const blogApp = document.getElementById('blogApp');
 
+    // Lấy slug bài viết từ phần #hash của URL (VD blog.html#tu-hoc-tieng-anh → 'tu-hoc-tieng-anh')
     function getSlugFromHash() { return location.hash.replace('#', ''); }
 
+    // [ĐIỂM BẮT ĐẦU BLOG] Có slug trên URL thì mở bài viết, không thì hiện danh sách bài
     async function init() {
       const slug = getSlugFromHash();
       if (slug) await loadPost(slug);
       else await loadList();
     }
 
+    // [ĐANG DÙNG] Gọi GET /api/blog và vẽ danh sách bài (danh mục, tác giả, lượt xem, điểm sao); bấm thẻ để đổi #hash mở bài
     async function loadList() {
       try {
         const res = await fetch('/api/blog');
@@ -295,6 +298,8 @@
       } catch(e) { blogApp.innerHTML = '<p>Lỗi tải bài viết</p>'; }
     }
 
+    // [ĐANG DÙNG] Gọi GET /api/blog/:slug, cập nhật title/meta SEO, vẽ nội dung bài + bình luận + form đánh giá;
+    // bài có nội dung song ngữ thì hiện nút chuyển EN/VI
     async function loadPost(slug) {
       try {
         const res = await fetch('/api/blog/' + slug);
@@ -382,6 +387,7 @@
       vi: { back: '← Quay lại danh sách', views: 'lượt xem', reviews: 'đánh giá', leave: '✍️ Để lại đánh giá của bạn', name: 'Tên hiển thị', nameP: 'Nhập tên của bạn', rating: 'Đánh giá ⭐', cmt: 'Bình luận', cmtP: 'Chia sẻ trải nghiệm của bạn...', submit: 'Gửi đánh giá', commentsPrefix: '💬 Bình luận & Đánh giá' },
       en: { back: '← Back to list', views: 'views', reviews: 'reviews', leave: '✍️ Leave a review', name: 'Display name', nameP: 'Enter your name', rating: 'Rating ⭐', cmt: 'Comment', cmtP: 'Share your experience...', submit: 'Submit review', commentsPrefix: '💬 Comments & Reviews' }
     };
+    // Chọn số sao trong form đánh giá và tô sáng các ngôi sao tương ứng
     function setRating(v) {
       currentRating = v;
       document.querySelectorAll('#starInput span').forEach(s => {
@@ -389,6 +395,7 @@
       });
     }
 
+    // [ĐANG DÙNG] Gửi bình luận + số sao qua POST /api/blog/:slug/comments rồi tải lại bài
     async function submitComment(slug) {
       const name = document.getElementById('cmtName').value.trim();
       const content = document.getElementById('cmtContent').value.trim();
@@ -403,16 +410,19 @@
       } catch(e) { alert('Lỗi gửi đánh giá'); }
     }
 
+    // Đổi điểm số thành chuỗi sao ★★★☆☆
     function renderStars(rating) {
       const full = Math.round(parseFloat(rating));
       return '★'.repeat(full) + '☆'.repeat(5 - full);
     }
 
+    // Đổi mã danh mục bài viết thành nhãn hiển thị có icon
     function categoryLabel(cat) {
       const labels = { 'learning-tips': '📚 Mẹo Học', 'vocabulary': '📖 Từ Vựng', 'business-english': '💼 Business', 'resources': '🔗 Tài Liệu', 'feature': '🚀 Tính Năng', 'review': '⭐ Review', 'kids': '👶 Trẻ Em', 'general': '🌍 Tổng Hợp', 'features': '✨ Tính Năng Mới' };
       return labels[cat] || '📝 ' + cat;
     }
 
+    // Chuyển ngôn ngữ hiển thị bài song ngữ (en | vi): đổi class body, trạng thái nút và chữ trên form bình luận
     function setBlogLang(l) {
       document.body.className = 'show-' + l;
       const bEn = document.getElementById('btn-lang-en');
@@ -447,6 +457,7 @@
       }
     }
 
+    // Khi #hash trên URL đổi (mở bài / quay lại) thì chạy lại init
     window.addEventListener('hashchange', init);
     init();
   </script>

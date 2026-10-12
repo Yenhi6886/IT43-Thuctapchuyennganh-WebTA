@@ -14,6 +14,7 @@ const DB_CONFIG = {
 
 let pool = null;
 
+// Tạo pool kết nối MySQL một lần duy nhất (lazy), các lần sau dùng lại
 function getPool() {
   if (!pool) {
     pool = mysql.createPool(DB_CONFIG);
@@ -21,12 +22,14 @@ function getPool() {
   return pool;
 }
 
+// Hàm truy vấn dùng chung cho toàn dự án: chạy câu SQL có tham số "?" (chống SQL injection), trả về mảng dòng kết quả
 async function query(sql, params = []) {
   const p = getPool();
   const [rows] = await p.execute(sql, params);
   return rows;
 }
 
+// Wrapper tương thích code cũ: trả về object có query/execute đều trỏ tới query()
 async function getDb() {
   return { query, execute: query };
 }

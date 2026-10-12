@@ -2,17 +2,20 @@
 const _store = { vocab: {}, lessons: {}, grammar: {}, reading: {}, listening: {}, speaking: {}, writing: {} };
 const VOCAB_CATEGORIES = ['IT', 'Công sở', 'Giao tiếp', 'Du lịch', 'Ăn uống', 'Hàng ngày', 'Sức khỏe', 'Mua sắm'];
 
+// Tạo các <option> danh mục từ vựng cho ô select, chọn sẵn danh mục hiện tại
 function vocabCategoryOptions(selected) {
   const cur = selected || 'IT';
   return VOCAB_CATEGORIES.map(c => `<option value="${esc(c)}"${c === cur ? ' selected' : ''}>${esc(c)}</option>`).join('');
 }
 
+// Lưu tạm danh sách vừa tải vào _store theo id, để nút Xem/Sửa lấy lại dữ liệu mà không gọi API thêm (getItem)
 function storeItems(type, items) {
   _store[type] = {};
   (items || []).forEach(it => { if (it && it.id != null) _store[type][it.id] = it; });
 }
 function getItem(type, id) { return _store[type][id]; }
 
+// Tạo cụm nút Xem / Sửa / Xóa cho một dòng dữ liệu
 function actionBtns(type, id) {
   return `<div class="item-actions">
     <button class="btn btn-icon" title="Xem" onclick="viewItem('${type}',${id})"><i class="fa-solid fa-eye"></i></button>
@@ -21,6 +24,7 @@ function actionBtns(type, id) {
   </div>`;
 }
 
+// valAttr: escape chuỗi để đặt vào thuộc tính value="..."; nl: escape và đổi xuống dòng thành <br>
 function valAttr(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
@@ -102,6 +106,7 @@ function formatQuestionsHtml(qs) {
   }).join('');
 }
 
+// [ĐANG DÙNG] Mở modal xem chi tiết một mục (từ vựng, bài lý thuyết, câu ngữ pháp, truyện...) từ dữ liệu trong _store
 function viewItem(type, id) {
   const it = getItem(type, id);
   if (!it) { alert('Không tìm thấy dữ liệu. Hãy tải lại trang.'); return; }
@@ -157,6 +162,7 @@ function viewItem(type, id) {
     </div>`);
 }
 
+// [ĐANG DÙNG] Mở form sửa đúng loại dữ liệu (gọi show...Form với dữ liệu có sẵn)
 function editItem(type, id) {
   const it = getItem(type, id);
   if (!it) { alert('Không tìm thấy dữ liệu.'); return; }
@@ -169,6 +175,7 @@ function editItem(type, id) {
   if (type === 'writing') return showWritingForm(it);
 }
 
+// [ĐANG DÙNG] Xác nhận rồi gọi DELETE tới API admin tương ứng với loại dữ liệu, sau đó tải lại danh sách và thống kê
 function deleteItem(type, id) {
   if (!confirm('Xóa mục này?')) return;
   const map = {
@@ -187,6 +194,8 @@ function deleteItem(type, id) {
 }
 
 // ---------- VOCAB ----------
+// [ĐANG DÙNG - ADMIN TỪ VỰNG] Tải danh mục cho ô lọc (GET /api/admin/vocabulary/categories), rồi tải bảng từ vựng
+// theo trang + danh mục + từ khóa (GET /api/admin/vocabulary), vẽ bảng và thanh phân trang
 function loadVocabulary(page) {
   if (page) _vocabPage = page;
   const sel = document.getElementById('vocab-cat-filter');
@@ -250,6 +259,7 @@ function loadVocabulary(page) {
   });
 }
 
+// Mở form thêm (v rỗng) hoặc sửa (v có dữ liệu) từ vựng
 function showVocabForm(v) {
   const e = !!v;
   openModal(`<button class="close-modal" onclick="closeModal()">✕</button>
@@ -266,6 +276,7 @@ function showVocabForm(v) {
     <button class="btn btn-primary" onclick="saveVocab(${v?.id || 0})">${e ? 'Cập nhật' : 'Thêm mới'}</button></div>`);
 }
 
+// Lưu từ vựng: id = 0 → POST (thêm mới), id > 0 → PUT (cập nhật); xong thì đóng form và tải lại
 function saveVocab(id) {
   const body = { term: gv('m-term'), word_type: gv('m-type'), definition_vi: gv('m-defvi'), definition_en: gv('m-defen'), category: gv('m-cat'), example1: gv('m-ex1'), example2: gv('m-ex2'), example3: gv('m-ex3'), day_number: 1 };
   if (!body.term) { alert('Vui lòng nhập từ vựng!'); return; }
@@ -274,8 +285,10 @@ function saveVocab(id) {
 }
 
 // ---------- GRAMMAR ----------
+// [ĐANG DÙNG - ADMIN NGỮ PHÁP] Mở mục Ngữ pháp → mặc định hiện tab Lý thuyết
 function loadGrammar() { loadGrammarLessons(); }
 
+// Chuyển tab Lý thuyết ↔ Bài tập trong mục Ngữ pháp
 function switchGrammarTab(tab) {
   document.querySelectorAll('#view-grammar .tab-btn').forEach(b => b.classList.remove('active'));
   if (tab === 'lessons') {
@@ -291,6 +304,7 @@ function switchGrammarTab(tab) {
   }
 }
 
+// Tải danh sách bài lý thuyết (GET /api/admin/grammar-lessons) và vẽ từng mục kèm nút Xem/Sửa/Xóa
 function loadGrammarLessons() {
   const area = document.getElementById('grammar-lessons-area');
   area.innerHTML = '<p class="text-center" style="padding:2rem">Đang tải...</p>';
@@ -325,10 +339,12 @@ const GRAMMAR_TYPE_OPTIONS = [
   'Động từ khuyết thiếu (Modals)', 'Danh động từ & V-ing (Gerunds)', 'So sánh (Comparisons)'
 ];
 
+// Tạo các <option> dạng ngữ pháp cho ô select
 function grammarTypeSelect(selected, id) {
   return GRAMMAR_TYPE_OPTIONS.map(t => `<option value="${valAttr(t)}" ${t === selected ? 'selected' : ''}>${esc(t)}</option>`).join('');
 }
 
+// Mở form thêm/sửa bài lý thuyết (dạng, tiêu đề, nội dung, ví dụ, mẹo)
 function showLessonForm(l) {
   const e = !!l;
   openModal(`<button class="close-modal" onclick="closeModal()">✕</button>
@@ -342,6 +358,7 @@ function showLessonForm(l) {
     <button class="btn btn-primary" onclick="saveLesson(${l?.id || 0})">${e ? 'Cập nhật' : 'Thêm'}</button></div>`);
 }
 
+// Lưu bài lý thuyết (POST nếu thêm, PUT nếu sửa); bản tiếng Anh tạm dùng lại nội dung tiếng Việt
 function saveLesson(id) {
   const body = {
     topic: gv('ml-topic'), day_number: 1,
@@ -353,6 +370,7 @@ function saveLesson(id) {
     .then(r => r.json()).then(d => { if (d.error) { alert(d.error); return; } closeModal(); loadGrammarLessons(); });
 }
 
+// Tải danh sách câu hỏi bài tập (GET /api/admin/grammar) và vẽ kèm đáp án đúng
 function loadGrammarExercises() {
   const area = document.getElementById('grammar-exercises-area');
   area.innerHTML = '<p class="text-center" style="padding:2rem">Đang tải...</p>';
@@ -380,6 +398,7 @@ function loadGrammarExercises() {
   }).catch(e => { area.innerHTML = `<p style="color:red;padding:2rem">Lỗi: ${esc(e.message)}</p>`; });
 }
 
+// Mở form thêm/sửa câu hỏi ngữ pháp (câu hỏi, 4 đáp án A-D, đáp án đúng, giải thích, dạng)
 function showExerciseForm(ex) {
   const e = !!ex;
   const opts = Array.isArray(ex?.options) ? ex.options : ['', '', '', ''];
@@ -397,6 +416,7 @@ function showExerciseForm(ex) {
     <button class="btn btn-primary" onclick="saveExercise(${ex?.id || 0})">${e ? 'Cập nhật' : 'Thêm'}</button></div>`);
 }
 
+// Lưu câu hỏi ngữ pháp (POST nếu thêm, PUT nếu sửa), rồi tải lại danh sách và thống kê
 function saveExercise(id) {
   const body = { question: gv('me-q'), options: [gv('me-a'), gv('me-b'), gv('me-c'), gv('me-d')], correct_answer: gv('me-correct'), explanation: gv('me-expl'), grammar_topic: gv('me-topic'), day_number: 1 };
   if (!body.question) { alert('Nhập câu hỏi!'); return; }
@@ -428,6 +448,7 @@ function readingTopicSelect(selected) {
   return `<option value="IT" selected>IT</option>`;
 }
 
+// [ĐANG DÙNG - ADMIN ĐỌC TRUYỆN] Mở mục Đọc truyện → tải truyện chủ đề IT
 function loadReading() {
   _readingTopic = 'IT';
   loadReadingByTopic('IT');
@@ -445,6 +466,7 @@ function adminBackReadingTopics() {
   loadReading();
 }
 
+// Tải truyện theo chủ đề (GET /api/admin/reading?category=...) và vẽ danh sách kèm nút Xem/Sửa/Xóa
 function loadReadingByTopic(topic) {
   const area = document.getElementById('reading-list');
   const crumb = document.getElementById('reading-breadcrumb');
@@ -501,6 +523,7 @@ function loadWriting() {
     ${actionBtns('writing', it.id)}</div>`);
 }
 
+// Mở form thêm/sửa truyện; nội dung hỗ trợ cú pháp [[từ|nghĩa]] để gạch chân từ song ngữ
 function showReadingForm(it) {
   const e = !!it;
   openModal(`<button class="close-modal" onclick="closeModal()">✕</button>
@@ -514,6 +537,7 @@ function showReadingForm(it) {
     <button class="btn btn-primary" onclick="saveReading(${it?.id || 0})">${e ? 'Cập nhật' : 'Thêm'}</button></div>`);
 }
 
+// Lưu truyện (POST nếu thêm, PUT nếu sửa), luôn gán chủ đề 'IT'
 function saveReading(id) {
   const body = { title: gv('mr-title'), content: gv('mr-content'), category: 'IT', questions: [], day_number: 1 };
   if (!body.title || !body.content) { alert('Nhập tiêu đề và nội dung!'); return; }

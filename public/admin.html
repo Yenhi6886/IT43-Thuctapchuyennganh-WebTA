@@ -199,20 +199,25 @@
   const VOCAB_PAGE_SIZE = 50;
   const LIST_LIMIT = 5000;
 
+  // Lấy mảng dữ liệu từ response (API trả mảng thẳng hoặc dạng { data: [...] })
   function asList(res) {
     if (Array.isArray(res)) return res;
     if (res && Array.isArray(res.data)) return res.data;
     return [];
   }
+  // Lấy tổng số bản ghi từ pagination, không có thì dùng độ dài mảng
   function asTotal(res, list) {
     return res?.pagination?.total ?? list.length;
   }
+  // Escape HTML để chèn chuỗi vào innerHTML an toàn
   function esc(s) {
     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+  // setText: gán text cho phần tử (số thì định dạng 1.234); gv: lấy value của ô input theo id
   function setText(id,val) { const el=document.getElementById(id); if(el) el.textContent = typeof val==='number'?val.toLocaleString():(val||'0'); }
   function gv(id) { return document.getElementById(id)?.value||''; }
 
+  // [ĐIỂM BẮT ĐẦU ADMIN] Nếu localStorage có user role_admin thì vào thẳng trang quản trị, không thì hiện form đăng nhập
   function checkAuth() {
     const saved = localStorage.getItem('user');
     if (saved) {
@@ -223,6 +228,7 @@
     document.getElementById('admin-app').style.display = 'none';
   }
 
+  // [ĐANG DÙNG] Đăng nhập admin: gọi POST /api/auth/login, chỉ cho vào nếu role = 'role_admin', lưu user vào localStorage
   async function adminLogin() {
     const u = document.getElementById('admin-username').value.trim();
     const p = document.getElementById('admin-password').value;
@@ -245,6 +251,7 @@
     }
   }
 
+  // Ẩn form đăng nhập, hiện giao diện admin, gắn sự kiện menu và tải trang Tổng quan
   function showAdminApp(user) {
     _adminUser = user;
     document.getElementById('admin-login-overlay').style.display = 'none';
@@ -254,6 +261,7 @@
     loadDashboard();
   }
 
+  // Đăng xuất admin: xóa user trong localStorage và quay lại form đăng nhập
   function adminLogout() {
     localStorage.removeItem('user');
     _adminUser = null;
@@ -262,11 +270,13 @@
   }
 
   // ==================== NAVIGATION ====================
+  // Chuyển sang một mục menu bằng cách giả lập click (dùng cho thẻ thống kê ở Tổng quan)
   function goView(view) {
     const link = document.querySelector(`.nav-links li[data-view="${view}"]`);
     if (link) link.click();
   }
 
+  // Gắn sự kiện: nút thu gọn/mở sidebar, click từng mục menu → hiện view tương ứng và gọi loadView
   function initNav() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
@@ -294,11 +304,13 @@
     });
   }
 
+  // Định dạng ngày giờ kiểu Việt Nam, không có thì hiện '—'
   function fmtDateTime(d) {
     if (!d) return '—';
     return new Date(d).toLocaleString('vi-VN');
   }
 
+  // Gọi hàm tải dữ liệu theo view: dashboard, users, vocabulary, grammar, exercises (Đọc truyện), shadowing
   function loadView(v) {
     const allowed = ['dashboard', 'users', 'vocabulary', 'grammar', 'exercises', 'shadowing'];
     if (!allowed.includes(v)) v = 'dashboard';
@@ -307,11 +319,13 @@
   }
 
   // ==================== MODAL ====================
+  // Mở / đóng hộp thoại modal dùng chung cho các form thêm/sửa/xem
   function openModal(html) { document.getElementById('modal-content').innerHTML = html; document.getElementById('modal-overlay').classList.remove('hidden'); }
   function closeModal() { document.getElementById('modal-overlay').classList.add('hidden'); }
   document.addEventListener('click', e => { if (e.target.id === 'modal-overlay') closeModal(); });
 
   // ==================== DASHBOARD ====================
+  // [ĐANG DÙNG] Tổng quan: gọi GET /api/admin/dashboard và hiển thị các con số thống kê
   function loadDashboard() {
     fetch('/api/admin/dashboard').then(r=>r.json()).then(d => {
       setText('stat-users', d.totalUsers);
@@ -327,6 +341,7 @@
   }
 
   // ==================== USERS ====================
+  // [ĐANG DÙNG] Người dùng: gọi GET /api/admin/users, vẽ bảng user kèm ô đổi quyền và nút xóa
   function loadUsers() {
     const tbody = document.getElementById('users-tbody');
     tbody.innerHTML = '<tr><td colspan="5" class="text-center">Đang tải...</td></tr>';
@@ -354,9 +369,11 @@
     }).catch(e => { tbody.innerHTML = `<tr><td colspan="5" class="text-center" style="color:red">Lỗi: ${esc(e.message)}</td></tr>`; });
   }
 
+  // Đổi quyền user (PUT /api/admin/users/:id/role) rồi tải lại bảng
   function updateRole(id, role) {
     fetch(`/api/admin/users/${id}/role`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({role})}).then(()=>loadUsers());
   }
+  // Xác nhận rồi xóa user (DELETE /api/admin/users/:id), tải lại bảng và thống kê
   function deleteUser(id) {
     if(!confirm('Xóa user này? Mọi dữ liệu học tập sẽ bị mất!'))return;
     fetch(`/api/admin/users/${id}`,{method:'DELETE'}).then(()=>{loadUsers();loadDashboard();});
@@ -441,6 +458,7 @@
     'IT': '💻 IT'
   };
 
+  // [ĐANG DÙNG] Shadowing: tải chủ đề (GET /api/shadowing/topics) làm nút lọc, rồi tải và vẽ danh sách video
   function loadVideos(category) {
     const area = document.getElementById('video-area');
     area.innerHTML = '<div style="display:flex;justify-content:center;padding:2rem"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>';
@@ -472,6 +490,7 @@
     }).catch(e => { area.innerHTML = `<p style="color:red;padding:2rem">Lỗi: ${esc(e.message)}</p>`; });
   }
 
+  // Mở form thêm video: link YouTube, tiêu đề, chủ đề, độ khó
   function showImportVideoModal() {
     openModal(`<button class="close-modal" onclick="closeModal()">✕</button>
       <h2>Thêm Video Shadowing</h2>
@@ -493,6 +512,7 @@
       </div>`);
   }
 
+  // Tách videoId từ link YouTube, gọi POST /api/admin/youtube-import (lấy phụ đề + dịch, mất 10-20s), xong thì tải lại danh sách
   function importYTVideo(btn) {
     let vidInput = gv('mv-id');
     if (!vidInput) { alert('Vui lòng nhập ID hoặc URL YouTube'); return; }
@@ -518,6 +538,7 @@
       });
   }
 
+  // Xác nhận rồi xóa video (DELETE /api/admin/youtube-import/:id)
   function deleteVideo(id) {
     if(!confirm('Bạn có chắc muốn xóa video này? Khôi phục lại sẽ phải tải lại Sub!')) return;
     fetch('/api/admin/youtube-import/' + id, {method:'DELETE'}).then(()=>loadVideos());

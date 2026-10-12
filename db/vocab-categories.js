@@ -48,6 +48,7 @@ const LEGACY_VOCAB_CATEGORY_MAP = {
   Shopping: 'Mua sắm'
 };
 
+// Chuẩn hóa danh mục từ vựng về 1 trong 8 danh mục chuẩn (danh mục IT cũ → 'IT', không khớp → 'Hàng ngày')
 function normalizeVocabCategory(cat) {
   if (!cat || !String(cat).trim()) return 'Hàng ngày';
   const c = String(cat).trim();
@@ -57,6 +58,7 @@ function normalizeVocabCategory(cat) {
   return 'Hàng ngày';
 }
 
+// Cập nhật toàn bộ bảng vocabulary: đổi danh mục cũ sang danh mục chuẩn (chạy khi server khởi động)
 async function migrateVocabCategories(query) {
   const rows = await query('SELECT DISTINCT category FROM vocabulary WHERE category IS NOT NULL');
   for (const r of rows) {

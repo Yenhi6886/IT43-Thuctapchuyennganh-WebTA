@@ -128,6 +128,8 @@ const SAMPLE_VOCAB_BY_CATEGORY = {
   ]
 };
 
+// Chạy mỗi lần server khởi động: chuẩn hóa danh mục từ vựng/bài đọc/ngữ pháp/video,
+// và chèn dữ liệu mẫu (từ vựng, truyện, bài ngữ pháp) nếu DB còn thiếu
 async function ensureSampleContent() {
   try {
     // Gộp danh mục từ vựng IT cũ → IT, chuẩn hóa các danh mục khác

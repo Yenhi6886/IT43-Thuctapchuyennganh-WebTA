@@ -20,6 +20,7 @@ const COMPANIES = [
 ];
 
 // ===== LANDING PAGE =====
+// Hiện trang giới thiệu (landing), ẩn màn hình đăng nhập và app học
 function showLanding() {
   $('landingPage').classList.remove('hidden');
   $('authScreen').classList.add('hidden');
@@ -28,6 +29,7 @@ function showLanding() {
   renderLandingCompanies();
 }
 
+// Mở màn hình đăng nhập/đăng ký; mode = 'register' mở tab Đăng ký, còn lại mở tab Đăng nhập
 function showAuthScreen(mode) {
   $('landingPage').classList.add('hidden');
   $('authScreen').classList.remove('hidden');
@@ -35,6 +37,7 @@ function showAuthScreen(mode) {
   if (mode === 'register') { showRegister(); } else { showLogin(); }
 }
 
+// Vẽ thẻ công ty trên landing (thoát ngay nếu trang không có #companyGrid)
 function renderLandingCompanies() {
   const grid = $('companyGrid');
   if (!grid) return;
@@ -95,6 +98,7 @@ async function showCompanyPreview(companyId, companyName) {
 }
 
 // ===== HELPERS =====
+// Hiện thông báo nhỏ góc màn hình, tự ẩn sau 3 giây (type: info | success | error)
 function toast(msg, type = 'info') {
   const c = document.getElementById('toast-container');
   const t = document.createElement('div');
@@ -104,7 +108,9 @@ function toast(msg, type = 'info') {
   setTimeout(() => t.remove(), 3000);
 }
 
+// Viết tắt của document.getElementById
 function $(id) { return document.getElementById(id); }
+// Đóng/mở sidebar trên mobile
 function toggleSidebar() { 
   $('sidebar').classList.toggle('open'); 
   const overlay = $('sidebarOverlay');
@@ -112,6 +118,7 @@ function toggleSidebar() {
 }
 
 // ===== AUTH =====
+// Chuyển sang tab Đăng ký trên màn hình xác thực
 function showRegister() {
   $('loginForm').classList.add('hidden');
   $('registerForm').classList.remove('hidden');
@@ -120,6 +127,7 @@ function showRegister() {
   if (tl) tl.classList.remove('active');
   if (tr) tr.classList.add('active');
 }
+// Chuyển sang tab Đăng nhập trên màn hình xác thực
 function showLogin() {
   $('registerForm').classList.add('hidden');
   $('loginForm').classList.remove('hidden');
@@ -129,6 +137,8 @@ function showLogin() {
   if (tr) tr.classList.remove('active');
 }
 
+// [ĐANG DÙNG] Đăng nhập: đọc ô username/mật khẩu → gọi API.login → lưu user vào localStorage
+// → nếu là admin thì chuyển sang /admin.html, ngược lại vào app học (enterApp)
 async function login() {
   try {
     const u = $('loginUsername').value.trim();
@@ -148,6 +158,7 @@ async function login() {
   }
 }
 
+// [ĐANG DÙNG] Đăng ký: đọc tên hiển thị/username/mật khẩu → gọi API.register → lưu user → vào app học
 async function register() {
   try {
     const n = $('regName').value.trim();
@@ -276,6 +287,7 @@ async function saveOnboarding() {
   } catch(e) { toast(e.message, 'error'); }
 }
 
+// [ĐANG DÙNG] Đăng xuất: xóa user trong bộ nhớ và localStorage, quay về landing
 function logout() {
   currentUser = null;
   localStorage.removeItem('user');
@@ -291,6 +303,8 @@ function redirectAdminToPanel() {
   return false;
 }
 
+// [ĐANG DÙNG] Vào app học sau khi đăng nhập/đăng ký: hiện layout chính, nạp thông tin user, đặt tiếng Việt,
+// bật popup email nếu thiếu email, bật nhắc học 20:30, rồi mở trang theo URL hiện tại
 function enterApp() {
   if (redirectAdminToPanel()) return;
   $('landingPage').classList.add('hidden');
@@ -310,6 +324,7 @@ function enterApp() {
   navigate(initialPage === 'dashboard' ? 'intro' : initialPage, true);
 }
 
+// Hiện tên + avatar ở sidebar, rồi gọi /api/auth/profile để cập nhật thông tin user mới nhất vào localStorage
 async function refreshUserInfo() {
   if (!currentUser) return;
   $('userDisplayName').textContent = currentUser.display_name || currentUser.username;
@@ -329,6 +344,7 @@ async function refreshUserInfo() {
 }
 
 // ===== EMAIL REQUIRED POPUP =====
+// Hiện popup bắt buộc nhập email (khi user chưa có email)
 function showEmailRequiredPopup() {
   const overlay = document.createElement('div');
   overlay.id = 'emailRequiredOverlay';
@@ -345,6 +361,7 @@ function showEmailRequiredPopup() {
   document.body.appendChild(overlay);
 }
 
+// Kiểm tra email hợp lệ → PUT /api/auth/email → lưu vào currentUser và đóng popup
 async function saveRequiredEmail() {
   const email = document.getElementById('requiredEmailInput')?.value?.trim();
   if (!email || !email.includes('@')) { toast(t('email.required.invalid') || 'Please enter a valid email', 'error'); return; }
@@ -358,6 +375,7 @@ async function saveRequiredEmail() {
 }
 
 // ===== STUDY REMINDER (8:30 PM) =====
+// Xin quyền thông báo trình duyệt; mỗi phút kiểm tra, đúng 20:30 thì nhắc học (mỗi ngày 1 lần)
 function setupStudyReminder() {
   // Request notification permission
   if ('Notification' in window && Notification.permission === 'default') {
@@ -379,6 +397,7 @@ function setupStudyReminder() {
   }, 60000);
 }
 
+// Hiện thông báo nhắc học: notification của trình duyệt (nếu được cấp quyền) + toast trong app
 function showStudyReminder() {
   // Browser notification
   if ('Notification' in window && Notification.permission === 'granted') {
@@ -392,6 +411,7 @@ function showStudyReminder() {
 }
 
 // Check saved session
+// [ĐIỂM BẮT ĐẦU] Khi trang tải xong: đặt ngôn ngữ, nếu localStorage còn user thì vào thẳng app, không thì hiện landing
 window.addEventListener('DOMContentLoaded', () => {
   // Initialize language from localStorage
   const savedLang = localStorage.getItem('lang') || 'vi';
@@ -408,6 +428,7 @@ window.addEventListener('DOMContentLoaded', () => {
   } else { showLanding(); }
 });
 
+// Khi bấm nút Back/Forward của trình duyệt: hiển thị lại đúng trang theo history/URL
 window.addEventListener('popstate', (e) => {
   if (e.state && e.state.page) navigate(e.state.page, true);
   else {
@@ -418,6 +439,8 @@ window.addEventListener('popstate', (e) => {
 
 // ===== NAVIGATION =====
 // SCOPE: intro, vocabulary, grammar, flashcards, stories, shadowing, profile
+// [ĐANG DÙNG] Điều hướng giữa các trang (không tải lại trang): kiểm tra tên trang hợp lệ, đổi URL bằng
+// history.pushState, đánh dấu mục sidebar đang chọn, đóng sidebar trên mobile, rồi gọi renderPage
 function navigate(page, skipPush = false) {
   if (page === '' || page === 'reading' || page === 'dashboard') page = page === 'reading' ? 'stories' : 'intro';
   const validPages = ['intro', 'vocabulary', 'grammar', 'flashcards', 'stories', 'shadowing'];
@@ -438,6 +461,7 @@ function navigate(page, skipPush = false) {
   renderPage(page);
 }
 
+// Hiện spinner rồi gọi hàm vẽ tương ứng với trang (intro, vocabulary, flashcards, grammar, stories, shadowing)
 function renderPage(page) {
   const mc = $('mainContent');
   mc.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
@@ -450,6 +474,7 @@ function renderPage(page) {
 }
 
 // ===== INTRO (click logo) =====
+// [ĐANG DÙNG] Trang chào mừng trong app: lời chào, 5 thẻ chức năng (bấm để chuyển trang), hướng dẫn 3 bước
 function renderIntro() {
   const mc = $('mainContent');
   const name = currentUser?.display_name || currentUser?.username || 'bạn';
@@ -632,6 +657,7 @@ function generate30DayPlan(level, role) {
 }
 
 // ===== DAY SELECTOR COMPONENT =====
+// Tạo HTML tiêu đề trang dùng chung
 function pageHeader(title) {
   return `<div class="page-header"><h1>${title}</h1></div>`;
 }
@@ -655,6 +681,7 @@ const VOCAB_CAT_ICONS = {
 const VOCAB_PAGE_SIZE = 24;
 let _vocabPage = 1;
 
+// [ĐANG DÙNG - TỪ VỰNG] Vẽ trang Từ vựng: tạo nút lọc theo danh mục (API.getVocabCategories) rồi tải trang 1 của "Tất cả"
 async function renderVocabulary() {
   const mc = $('mainContent');
   mc.innerHTML = `${pageHeader(t('vocab.title'))}
@@ -675,6 +702,7 @@ async function renderVocabulary() {
   loadVocabCategory('', 1);
 }
 
+// Tải từ vựng của một danh mục theo trang (24 từ/trang) qua API.getVocabByCategory, rồi vẽ danh sách
 async function loadVocabCategory(cat, page) {
   window._vocabCategory = cat;
   if (page) _vocabPage = page;
@@ -693,6 +721,7 @@ async function loadVocabCategory(cat, page) {
   } catch (e) { if (listEl) listEl.innerHTML = `<p>Error: ${e.message}</p>`; }
 }
 
+// Vẽ thanh phân trang (Hiển thị x–y / tổng, nút Trước/Sau)
 function renderVocabPager(pagination) {
   const pager = $('vocabPager');
   if (!pager) return;
@@ -714,6 +743,7 @@ function renderVocabPager(pagination) {
     </div>` : ''}`;
 }
 
+// Vẽ lưới thẻ từ vựng (nghĩa VN/EN, ví dụ, mức thuộc), bấm thẻ để mở rộng; có nút Nghe / Đã biết / Ôn lại
 function renderVocabList(words, pagination) {
   const catClass = { 'IT': 'badge-algo', 'Công sở': 'badge-data', 'Giao tiếp': 'badge-hw', 'Du lịch': 'badge-algo', 'Ăn uống': 'badge-data', 'Hàng ngày': 'badge-hw', 'Sức khỏe': 'badge-algo', 'Mua sắm': 'badge-data' };
   $('vocabList').innerHTML = words.length ? words.map((w) => `
@@ -739,6 +769,7 @@ function renderVocabList(words, pagination) {
   renderVocabPager(pagination);
 }
 
+// Đánh dấu một từ là đã biết (correct = true) hoặc cần ôn (false) qua API.learnWord, rồi tải lại danh sách/flashcard
 async function markLearned(vocabId, correct) {
   try {
     await API.learnWord(currentUser.id, vocabId, correct);
@@ -750,6 +781,7 @@ async function markLearned(vocabId, correct) {
   } catch (e) { toast(e.message, 'error'); }
 }
 
+// Đọc to một từ bằng giọng tiếng Anh của trình duyệt (Web Speech API), tốc độ 0.8
 function speakWord(text) {
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'en-US'; u.rate = 0.8;
@@ -760,6 +792,7 @@ function speakWord(text) {
 let _flashcardCategory = '';
 let _flashcardFilter = 'unlearned';
 
+// [ĐANG DÙNG - FLASHCARDS] Vẽ trang FlashCards: nút chọn chủ đề, bộ lọc Chưa học/Đã học/Tất cả, rồi tải thẻ
 async function renderFlashcards() {
   const mc = $('mainContent');
   mc.innerHTML = `${pageHeader(t('flash.title'))}
@@ -791,18 +824,21 @@ async function renderFlashcards() {
   } catch (e) { $('flashcardArea').innerHTML = `<p>Error: ${e.message}</p>`; }
 }
 
+// Đổi chủ đề flashcard, quay về thẻ đầu và vẽ lại trang
 function selectFlashcardTopic(cat) {
   _flashcardCategory = cat;
   window._flashcardIdx = 0;
   renderFlashcards();
 }
 
+// Đổi bộ lọc flashcard (unlearned | learned | all), quay về thẻ đầu và vẽ lại trang
 function setFlashcardFilter(filter) {
   _flashcardFilter = filter;
   window._flashcardIdx = 0;
   renderFlashcards();
 }
 
+// Tải toàn bộ từ (không phân trang) của chủ đề + bộ lọc, lưu vào window._flashcardWords rồi vẽ thẻ hiện tại
 async function loadFlashcardWords(category, filter) {
   try {
     const words = await API.getVocabByCategory(currentUser.id, category, filter);
@@ -813,6 +849,8 @@ async function loadFlashcardWords(category, filter) {
   } catch (e) { $('flashcardArea').innerHTML = `<p>Error: ${e.message}</p>`; }
 }
 
+// Vẽ một thẻ lật (mặt trước: từ, mặt sau: nghĩa + ví dụ) và các nút Trước/Tiếp/Đã biết/Chưa thuộc;
+// ở thẻ cuối thì nút Tiếp đổi thành "Luyện tập" (mở quiz)
 function renderFlashcard() {
   const words = window._flashcardWords;
   const idx = window._flashcardIdx;
@@ -838,9 +876,11 @@ function renderFlashcard() {
     </div>`;
 }
 
+// Chuyển sang thẻ sau / thẻ trước
 function nextFlashcard() { if (window._flashcardIdx < window._flashcardWords.length - 1) { window._flashcardIdx++; renderFlashcard(); } }
 function prevFlashcard() { if (window._flashcardIdx > 0) { window._flashcardIdx--; renderFlashcard(); } }
 
+// Tạo bài quiz trắc nghiệm từ các thẻ hiện có: mỗi câu = 1 từ đúng + 3 nghĩa sai ngẫu nhiên (cần ≥ 2 từ)
 function startFlashcardQuiz() {
   const words = window._flashcardWords;
   if (!words || words.length < 2) {
@@ -864,6 +904,7 @@ function startFlashcardQuiz() {
   renderFlashcardQuiz();
 }
 
+// Vẽ câu quiz hiện tại; hết câu thì hiện tổng điểm và nút làm lại
 function renderFlashcardQuiz() {
   const quiz = window._fcQuiz;
   const idx = window._fcQuizIdx;
@@ -902,6 +943,7 @@ function renderFlashcardQuiz() {
   $('flashcardArea').innerHTML = html;
 }
 
+// Chấm một câu quiz: tô xanh nếu đúng (cộng điểm), tô đỏ nếu sai và chỉ ra đáp án đúng, khóa các nút, hiện nút Tiếp
 function checkFcQuiz(selectedId, correctId, optIndex) {
   const isCorrect = selectedId === correctId;
   const btn = document.getElementById(`fc-opt-${optIndex}`);
@@ -936,6 +978,7 @@ let _grammarPracticeType = '';
 let _grammarTab = 'theory'; // theory | practice
 let _grammarExFilter = 'all'; // all | done | undone
 
+// [ĐANG DÙNG - NGỮ PHÁP] Vẽ trang Ngữ pháp gồm 2 tab Lý thuyết / Bài tập, rồi tải dữ liệu tab đang chọn
 async function renderGrammar() {
   const mc = $('mainContent');
   mc.innerHTML = `${pageHeader(t('gram.title'))}
@@ -954,6 +997,7 @@ async function renderGrammar() {
   await loadGrammarTab(_grammarTab);
 }
 
+// Chuyển tab Lý thuyết ↔ Bài tập: đổi nút active, ẩn/hiện vùng nội dung, tải dữ liệu tab mới
 async function switchGrammarUserTab(tab) {
   _grammarTab = tab;
   document.querySelectorAll('#grammarContentTabs .tab').forEach((b, i) => {
@@ -966,6 +1010,7 @@ async function switchGrammarUserTab(tab) {
   await loadGrammarTab(tab);
 }
 
+// Vẽ hàng nút lọc theo dạng ngữ pháp (kèm số bài); bấm nút sẽ gọi hàm onSelectFn
 function renderGrammarTypeFilter(types, activeType, filterId, onSelectFn) {
   const el = $(filterId);
   if (!el) return;
@@ -980,6 +1025,7 @@ function renderGrammarTypeFilter(types, activeType, filterId, onSelectFn) {
   }).join('');
 }
 
+// Lấy danh sách dạng ngữ pháp (API.getGrammarTypes), chọn dạng đầu tiên nếu chưa chọn, rồi tải lý thuyết hoặc bài tập
 async function loadGrammarTab(tab) {
   const kind = tab === 'theory' ? 'theory' : 'exercises';
   try {
@@ -1005,6 +1051,7 @@ async function loadGrammarTab(tab) {
   }
 }
 
+// Chọn một dạng ở tab Lý thuyết và tải bài lý thuyết của dạng đó
 async function selectGrammarTheoryType(type) {
   _grammarTheoryType = type;
   document.querySelectorAll('#grammarTheoryFilter .filter-btn').forEach(b => {
@@ -1013,6 +1060,7 @@ async function selectGrammarTheoryType(type) {
   await loadGrammarTheory(type);
 }
 
+// Chọn một dạng ở tab Bài tập (đặt lại bộ lọc về "Tất cả") và tải bài tập của dạng đó
 async function selectGrammarPracticeType(type) {
   _grammarPracticeType = type;
   _grammarExFilter = 'all';
@@ -1022,6 +1070,7 @@ async function selectGrammarPracticeType(type) {
   await loadGrammarPracticeType(type);
 }
 
+// Gọi API.getGrammarLessonsByType rồi hiển thị các bài lý thuyết
 async function loadGrammarTheory(type) {
   const el = $('grammarTheoryContent');
   if (!el) return;
@@ -1032,6 +1081,7 @@ async function loadGrammarTheory(type) {
   } catch (e) { el.innerHTML = `<p>Error: ${e.message}</p>`; }
 }
 
+// Gọi API.getGrammarExercisesByType (kèm kết quả đã làm), vẽ bài tập và lưu số câu đã làm / đúng để tính điểm
 async function loadGrammarPracticeType(type) {
   const el = $('grammarPracticeContent');
   if (!el) return;
@@ -1046,6 +1096,7 @@ async function loadGrammarPracticeType(type) {
   } catch (e) { el.innerHTML = `<p>Error: ${e.message}</p>`; }
 }
 
+// Tạo HTML các thẻ lý thuyết: tiêu đề, nội dung (**đậm** → <strong>), ví dụ, mẹo nhớ
 function renderGrammarTheory(type, lessons) {
   if (!lessons || !lessons.length) {
     return `<div class="card grammar-empty"><p style="color:var(--text-muted);padding:24px;text-align:center">${t('gram.no.theory')}</p></div>`;
@@ -1078,6 +1129,7 @@ function renderGrammarTheory(type, lessons) {
   </div>`;
 }
 
+// Nhóm bài tập theo day_number để hiển thị thành từng "Phần"
 function groupGrammarExercises(exercises) {
   const groups = {};
   exercises.forEach(ex => {
@@ -1088,6 +1140,7 @@ function groupGrammarExercises(exercises) {
   return Object.keys(groups).sort((a, b) => a - b).map(k => ({ day: parseInt(k), items: groups[k] }));
 }
 
+// Tạo HTML một câu trắc nghiệm; nếu user đã làm thì tô sẵn đáp án đúng/sai và hiện giải thích
 function renderGrammarExerciseItem(ex, idx) {
   const done = ex.done;
   const optsHtml = ex.options.map((opt, j) => {
@@ -1115,6 +1168,7 @@ function renderGrammarExerciseItem(ex, idx) {
     </div>`;
 }
 
+// Tạo HTML tab Bài tập: thanh tiến độ, bộ lọc Tất cả/Chưa làm/Đã làm, các phần bài tập, ô điểm tổng
 function renderGrammarPractice(type, exercises) {
   const filtered = exercises.filter(ex => {
     if (_grammarExFilter === 'done') return ex.done;
@@ -1152,6 +1206,7 @@ function renderGrammarPractice(type, exercises) {
   </div>`;
 }
 
+// Đổi bộ lọc bài tập (all | undone | done) và tải lại
 function setGrammarExFilter(filter, type) {
   _grammarExFilter = filter;
   loadGrammarPracticeType(type || _grammarPracticeType);
@@ -1162,6 +1217,7 @@ async function loadGrammarType(type) {
   else await selectGrammarPracticeType(type);
 }
 
+// Khi đã làm hết mọi câu của dạng: hiện vòng tròn điểm % và số câu đúng
 function updateGrammarScore(exercises) {
   const done = exercises.filter(e => e.done).length;
   const total = exercises.length;
@@ -1174,6 +1230,8 @@ function updateGrammarScore(exercises) {
   el.innerHTML = `<div class="score-circle ${score >= 80 ? 'score-high' : score >= 50 ? 'score-mid' : 'score-low'}">${score}%</div><p style="font-size:16px;font-weight:600;margin-top:8px">${correct}/${total} ${t('gram.correct')}</p>`;
 }
 
+// Chấm một câu ngữ pháp khi user chọn đáp án: tô màu, hiện giải thích, lưu qua API.submitGrammarAnswer,
+// cập nhật thanh tiến độ; làm xong cả dạng thì hiện điểm và gọi API.trackActivity
 async function checkGrammar(id, selected, correct, idx, total) {
   const q = document.getElementById(`grammar-${id}`);
   if (!q || q.dataset.done) return;
@@ -1215,10 +1273,13 @@ async function checkGrammar(id, selected, correct, idx, total) {
 }
 
 // ===== READING (bilingual hover) =====
+// Escape ký tự HTML (& < > ") để chèn chuỗi vào innerHTML an toàn
 function escHtml(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// Tạo HTML đoạn truyện song ngữ: đổi cú pháp [[từ|nghĩa]] thành từ gạch chân có nghĩa khi rê chuột,
+// tự gạch chân các từ có trong danh sách từ vựng, nếu ít hơn 5 từ thì dùng thêm bộ từ IT phổ biến
 function buildBilingualPassage(content, vocabList) {
   if (!content) return '';
   let text = escHtml(content);
@@ -1253,10 +1314,12 @@ function buildBilingualPassage(content, vocabList) {
   return text;
 }
 
+// [ĐANG DÙNG - ĐỌC TRUYỆN] Trang "Đọc truyện" (menu stories) → dùng chung renderReading
 async function renderStories() {
   return renderReading();
 }
 
+// [ĐANG DÙNG - SHADOWING] Vẽ trang Shadowing: vùng chọn chủ đề + vùng danh sách video
 async function renderShadowing() {
   const mc = $('mainContent');
   mc.innerHTML = `${pageHeader(t('shadow.title'))}
@@ -1267,6 +1330,7 @@ async function renderShadowing() {
 
 let _shadowingTopic = '';
 
+// Tải chủ đề Shadowing (API.getShadowingTopics), vẽ thẻ chủ đề; lần đầu tự mở chủ đề thứ nhất
 async function showShadowingTopics() {
   const area = $('shadowingTopics');
   area.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
@@ -1287,21 +1351,25 @@ async function showShadowingTopics() {
   }
 }
 
+// Ghi nhớ chủ đề đang chọn và tải danh sách video của chủ đề đó
 function loadShadowingByTopic(topic) {
   _shadowingTopic = topic;
   loadYouTubeList(topic);
 }
 
+// Vẽ khung trang Đọc truyện rồi tải danh sách truyện chủ đề IT
 async function renderReading() {
   const mc = $('mainContent');
   mc.innerHTML = `${pageHeader(t('read.title'))}<div id="readingContent"><div class="loading"><div class="spinner"></div></div></div>`;
   loadStoriesByTopic('IT');
 }
 
+// Nút "Quay lại" từ một truyện → tải lại danh sách truyện IT
 async function showStoryTopics() {
   loadStoriesByTopic('IT');
 }
 
+// Gọi API.getReadingList và vẽ lưới thẻ tiêu đề truyện (bấm để mở truyện)
 async function loadStoriesByTopic(topic) {
   currentStoryTopic = topic;
   const area = $('readingContent');
@@ -1324,6 +1392,8 @@ async function loadStoriesByTopic(topic) {
   }
 }
 
+// Mở một truyện: lấy nội dung (API.getReadingStory) + từ vựng cùng danh mục (API.getAllVocab),
+// rồi hiển thị đoạn văn song ngữ có từ gạch chân
 async function openStory(id) {
   const area = $('readingContent');
   area.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
@@ -1392,6 +1462,7 @@ function showListeningTab(tab) {
   if (tab === 'youtube') loadYouTubeList();
 }
 
+// [ĐANG DÙNG - SHADOWING] Gọi GET /api/youtube-listening (lọc theo chủ đề) và vẽ lưới thẻ video (ảnh thumbnail, cấp độ)
 async function loadYouTubeList(category) {
   try {
     const cat = category || _shadowingTopic || '';
@@ -1417,6 +1488,8 @@ async function loadYouTubeList(category) {
   } catch(e) { $('ytListArea').innerHTML = '<p>Lỗi tải video</p>'; }
 }
 
+// Mở một video: lấy transcript (GET /api/youtube-listening/:id), vẽ trình phát + bảng phụ đề song ngữ
+// (bấm câu để tua tới, ⭐ để lưu câu), rồi nạp YouTube IFrame API để tạo player
 async function openYouTubeExercise(id) {
   try {
     const res = await fetch('/api/youtube-listening/' + id);
@@ -1495,6 +1568,7 @@ async function openYouTubeExercise(id) {
   } catch(e) { $('ytListArea').innerHTML = '<p>Error loading exercise</p>'; }
 }
 
+// Tạo (hoặc tạo lại) YouTube player trong #ytPlayerContainer cho videoId
 function initYTPlayer(videoId) {
   if (window._ytPlayer) { try { window._ytPlayer.destroy(); } catch(e) {} }
   window._ytPlayer = new YT.Player('ytPlayerContainer', {
@@ -1506,6 +1580,7 @@ function initYTPlayer(videoId) {
 
 function onYTReady(e) { /* player ready */ }
 
+// Khi video đang phát thì cứ 300ms đồng bộ phụ đề một lần; dừng/tạm dừng thì tắt bộ đếm
 function onYTStateChange(e) {
   if (e.data === YT.PlayerState.PLAYING) {
     if (window._ytSubInterval) clearInterval(window._ytSubInterval);
@@ -1515,6 +1590,7 @@ function onYTStateChange(e) {
   }
 }
 
+// Tìm câu phụ đề ứng với thời điểm đang phát, tô sáng và cuộn tới câu đó
 function syncSubtitles() {
   if (!window._ytPlayer || !window._ytTranscriptData) return;
   const currentTime = window._ytPlayer.getCurrentTime();
@@ -1543,6 +1619,7 @@ function syncSubtitles() {
   }
 }
 
+// Tua video tới giây `time` và phát (khi bấm vào một câu phụ đề)
 function ytSeekTo(time) {
   if (window._ytPlayer && window._ytPlayer.seekTo) {
     window._ytPlayer.seekTo(time, true);
@@ -1550,6 +1627,7 @@ function ytSeekTo(time) {
   }
 }
 
+// Tua lùi/tới tương đối (nút -5s / +5s)
 function ytSeekRel(delta) {
   if (window._ytPlayer && window._ytPlayer.getCurrentTime) {
     const t = window._ytPlayer.getCurrentTime() + delta;
@@ -1557,6 +1635,7 @@ function ytSeekRel(delta) {
   }
 }
 
+// Phát / tạm dừng video
 function ytTogglePlay() {
   if (!window._ytPlayer) return;
   const state = window._ytPlayer.getPlayerState();
@@ -1564,6 +1643,7 @@ function ytTogglePlay() {
   else window._ytPlayer.playVideo();
 }
 
+// Bật / tắt toàn màn hình cho khung player
 function ytToggleFullscreen() {
   const wrapper = document.getElementById('ytPlayerWrapper');
   if (!wrapper) return;
@@ -2670,6 +2750,7 @@ function shareBadge(badgeName, icon, days) {
   });
 }
 // ===== VIDEO NOTES & PROFILE =====
+// [ĐANG DÙNG - SHADOWING] Lưu câu phụ đề user bấm ⭐ qua POST /api/video-notes, đổi icon nút thành 🌟 khi thành công
 async function saveVideoSentence(videoId, youtubeId, time, textEn, textVi, btnElement) {
   try {
     const res = await fetch('/api/video-notes', {
